@@ -27,6 +27,7 @@
     "@effect/platform-node": "^4.0.0-beta.99",
     "@effect/sql-pg": "^4.0.0-beta.99",
     "@inlang/paraglide-js": "^2.19.0",
+    "@krak-stack/registry": "0.1.19",
     "@lucas-barake/effect-form": "0.25.0-beta.6",
     "@lucas-barake/effect-form-react": "0.26.0-beta.5",
     "@tailwindcss/vite": "^4.3.1",
