@@ -49,21 +49,73 @@ export const WorkoutSummary = Schema.Struct({
 }).annotate({ identifier: "WorkoutSummary" });
 
 export const WorkoutPayload = Schema.Struct({
-  activityType: Schema.NonEmptyString,
+  activityType: Schema.String.check(Schema.isPattern(/\S/)),
   status: Schema.Union([
     Schema.Literal("planned"),
     Schema.Literal("completed"),
   ]),
-  startDate: Schema.NonEmptyString,
-  durationMinutes: Schema.Number,
+  startDate: Schema.String.check(
+    Schema.makeFilter((value) => Number.isFinite(Date.parse(value))),
+  ),
+  durationMinutes: Schema.Number.check(
+    Schema.isFinite(),
+    Schema.isGreaterThan(0),
+  ),
   indoor: Schema.optional(Schema.Boolean),
-  distanceKilometres: Schema.optional(Schema.Number),
+  distanceKilometres: Schema.optional(
+    Schema.Number.check(Schema.isFinite(), Schema.isGreaterThanOrEqualTo(0)),
+  ),
   notes: Schema.optional(Schema.String),
 }).annotate({ identifier: "WorkoutPayload" });
 
 export const WorkoutIdParams = Schema.Struct({
   id: Schema.String,
 }).annotate({ identifier: "WorkoutIdParams" });
+
+export const UpdateWorkoutRequest = Schema.Struct({
+  id: Schema.String,
+  payload: WorkoutPayload,
+}).annotate({ identifier: "UpdateWorkoutRequest" });
+
+// Keep browser input as strings so semantic validation can render form feedback.
+export const WorkoutFormFields = Schema.Record(
+  Schema.String,
+  Schema.String,
+).annotate({
+  identifier: "WorkoutFormFields",
+});
+
+export const WorkoutViewQuery = Schema.Record(
+  Schema.String,
+  Schema.String,
+).annotate({
+  identifier: "WorkoutViewQuery",
+});
+
+export const decodeWorkoutForm = (values: Record<string, string>) => {
+  const minutes = Number(values.minutes);
+  const seconds = Number(values.seconds);
+  const start = new Date(values.startDate);
+  const validDuration =
+    Boolean(values.minutes?.trim() && values.seconds?.trim()) &&
+    Number.isInteger(minutes) &&
+    minutes >= 0 &&
+    Number.isInteger(seconds) &&
+    seconds >= 0 &&
+    seconds <= 59;
+
+  return Schema.decodeUnknownEffect(WorkoutPayload)({
+    activityType: values.activityType?.trim(),
+    status: values.status,
+    startDate: Number.isFinite(start.getTime()) ? start.toISOString() : "",
+    durationMinutes: validDuration ? minutes + seconds / 60 : NaN,
+    indoor: values.indoor === "true",
+    ...(values.distance?.trim()
+      ? { distanceKilometres: Number(values.distance) }
+      : {}),
+    ...(values.notes?.trim() ? { notes: values.notes.trim() } : {}),
+  });
+};
 
 export class WorkoutDataError extends Schema.TaggedErrorClass<WorkoutDataError>()(
   "WorkoutDataError",
@@ -73,3 +125,39 @@ export class WorkoutDataError extends Schema.TaggedErrorClass<WorkoutDataError>(
 export type Workout = typeof Workout.Type;
 export type WorkoutPayload = typeof WorkoutPayload.Type;
 export type WorkoutSummary = typeof WorkoutSummary.Type;
+
+export type WorkoutSearchInput = {
+  readonly search?: string;
+  readonly sort?: string;
+  readonly page?: number;
+  /** Null selects all matching rows, for schedules and exports. */
+  readonly pageSize?: number | null;
+  readonly after?: string;
+  /** Exclusive upper bound. */
+  readonly before?: string;
+  readonly week?: boolean;
+};
+
+export type WorkoutPage = {
+  readonly workouts: ReadonlyArray<Workout>;
+  readonly total: number;
+  readonly page: number;
+  readonly pages: number;
+};
+
+export type WorkoutDay = {
+  readonly date: Date;
+  readonly workouts: ReadonlyArray<Workout>;
+};
+
+export type WorkoutSchedule = {
+  readonly days: ReadonlyArray<WorkoutDay>;
+  readonly total: number;
+};
+
+export type WorkoutOverview = {
+  readonly completedCount: number;
+  readonly distanceKilometres: number;
+  readonly currentPace: number | undefined;
+  readonly trends: ReadonlyArray<Workout>;
+};

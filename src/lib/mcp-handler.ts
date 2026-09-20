@@ -14,7 +14,8 @@ const httpApiLayer = Layer.mergeAll(
   HttpApiSpec.layer({ api: AppApi, methods: ["get"] }),
   ApiClient.layer({
     api: AppApi,
-    baseUrl: process.env.VITE_SITE_URL ?? "http://localhost:3000",
+    baseUrl:
+      process.env.SITE_URL ?? `http://localhost:${process.env.PORT ?? 3000}`,
   }).pipe(Layer.provide(FetchHttpClient.layer)),
 );
 

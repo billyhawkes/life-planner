@@ -7,12 +7,12 @@
 - Use project conventions already present in nearby files before introducing new patterns.
 - Do not edit generated or registry-managed files unless explicitly requested.
 
-## i18n
+## UI
 
-- English and French are required for all public-facing strings.
-- Translate public-facing strings with paraglide.js and the Vite plugin.
-- Store translations in `src/messages/en.json` and `src/messages/fr.json`.
-- Import generated messages from `src/paraglide/messages` instead of hardcoding UI copy.
+- Public-facing copy is English-only.
+- Write server-rendered views in TSX using the local JSX runtime in `src/lib/jsx/`.
+- JSX returns escaped `Html` values compatible with `src/lib/datastar.ts`; no React runtime is involved.
+- Use native HTML controls and Datastar attributes for interactions.
 
 ## Architecture
 
@@ -20,15 +20,16 @@ The application is divided into two areas: frontend and backend.
 
 ### Frontend
 
-- React with TanStack Start and TanStack Router.
-- shadcn UI primitives and installed registry components.
-- Effect service state for data loading and mutations.
-- Prefer existing app form, table, dialog, and data-fetching patterns before adding new abstractions.
+- Server-rendered HTML and plain CSS, enhanced by Datastar.
+- Server state lives in Effect services; mutations return Datastar SSE patches.
+- Keep forms usable through native POST/redirect as well as Datastar.
 
 ### Backend
 
 - Effect application services.
-- Effect Postgres and Drizzle ORM for database access.
+- Effect SQL through `@effect/sql-pg` for PostgreSQL access.
+- Effect SQL migrations run at startup, before serving requests or importing data.
+- Bun runs the HTTP server, builds the app, and parses Apple Health XML.
 - Effect HttpApi, HttpServer, OpenAPI, and OpenTelemetry for API and runtime concerns.
 
 ## Folder Structure
@@ -36,17 +37,14 @@ The application is divided into two areas: frontend and backend.
 - `public/` contains static assets.
 - `scripts/` contains build and utility scripts.
 - `tmp/` contains local temporary files that should not be committed.
-- `src/components/` contains React components.
-- `src/components/ui/` contains shadcn-managed primitives. Do not edit directly.
-- `src/db/` contains Drizzle schema definitions.
-- `src/hooks/` contains shared React hooks.
-- `src/lib/` contains shared utilities and auth config.
-- `src/messages/` contains i18n source files.
-- `src/paraglide/` contains generated i18n runtime. Do not edit directly.
-- `src/routes/` contains TanStack Start file-based routes.
-- `src/routes/api/` contains the API catch-all route.
-- `src/routes/docs/` contains documentation pages.
-- `src/services/` contains Effect service definitions, API handlers, schemas, and client state.
+- `src/db/` contains SQL client layers and versioned migrations.
+- `src/lib/` contains shared infrastructure and runtime utilities, including API/MCP helpers, Datastar HTML/SSE encoding, and JSX.
+- `src/services/` contains Effect service definitions, API handlers, and schemas.
+- `src/routes/` contains server-rendered TSX page templates and the document shell.
+- `src/services/<name>/components/` contains service-specific TSX components.
+- `src/services/<name>/helpers.ts` contains shared presentation types, formatting, and filtering helpers.
+- `src/lib/jsx/` contains the JSX runtime; `src/lib/datastar.ts` contains escaped HTML templates and SSE encoding.
+- `src/app.ts` composes application routes; `src/server.ts` starts Bun HTTP.
 - `src/api.ts` defines the root Effect API.
 
 ## Code Practices
@@ -69,11 +67,9 @@ A typical service should use this structure:
 
 - `src/services/<name>/schema.ts` defines Effect schemas, payload schemas, route params, and standard schema exports.
 - `src/services/<name>/index.ts` implements the Effect `Context.Service` and exposes production and test layers where needed.
-- `src/services/<name>/api.group.ts` defines the HttpApiGroup contract.
-- `src/services/<name>/api.builder.ts` wires the service into the root API with auth and error mapping.
-- `src/services/<name>/client/atom.ts` defines query and mutation atoms.
-- `src/services/<name>/client/form.tsx` defines reusable create/edit forms.
-- `src/services/<name>/client/table.tsx` defines data tables and row actions.
+- `src/services/<name>/api.group.ts` defines JSON API and browser (HTML, forms, SSE, downloads) HttpApiGroup contracts.
+- `src/services/<name>/api.builder.ts` implements those HTTP handlers, rendering page templates and mapping errors.
+- `src/services/<name>/components/` defines reusable UI components for that service; page composition belongs in `src/routes/`.
 
 Service methods should accept object inputs, scope by the current user or tenant where applicable, and avoid exposing cross-tenant data.
 
@@ -83,32 +79,28 @@ Service methods should accept object inputs, scope by the current user or tenant
 - Merge service API groups into the root API with `.add(...)`.
 - Keep OpenAPI annotations on the root API.
 - OpenAPI documentation is served at `/api/docs`.
-- MCP server support is served at `/api/mcp` and should use `@krak-stack/httpapi-mcp`.
-- CLI support should use `@krak-stack/httpapi-cli`.
+- MCP server support is served at `/api/mcp`, using Effect MCP and the shared HttpApi contract.
 
 ## Tooling
 
-- Use KrakStack Auth for user management, auth components, sessions, and organizations.
-- Use KrakStack Components where possible and keep installed registry components current.
-- Install KrakStack registry items with shadcn using the `@krak-stack` registry alias configured in `components.json`; do not copy registry item files manually unless explicitly requested.
-- Before creating a custom component, check the shadcn MCP server for a compatible component or registry item.
-- Use shadcn through the registry workflow. If needed, initialize MCP with `bunx --bun shadcn@latest mcp init --client opencode`.
+- Keep runtime dependencies limited to Bun, Effect, and the Effect PostgreSQL adapter.
+- Datastar is vendored in `public/datastar.js`; do not edit the minified runtime by hand.
+- The application is a local single-user tool with no authentication layer.
 
 ## Testing
 
-- Use Vitest with `@effect/vitest`.
+- Use Bun's built-in test runner (`bun test`).
 - Add tests beside code when practical using `*.test.ts` or `*.test.tsx`.
-- Import `describe`, `expect`, and `it` from `@effect/vitest`.
-- Use `it.effect` for Effect programs and provide dependencies with `Effect.provide(...)`.
+- Import `describe`, `expect`, and `it` from `bun:test`.
+- Run Effect programs with `Effect.runPromise(...)` and provide dependencies with `Effect.provide(...)`.
 - Prefer fresh per-test layers so mutable state does not leak.
 - Use suite-shared layers only for expensive resources and reset state between tests.
 - Backend and service tests must use the real Postgres test database through `TEST_DATABASE_URL`.
 - Never point tests at `DATABASE_URL`.
 - The test database is provided externally. Set `TEST_DATABASE_URL` in `.env` or the shell before DB tests.
-- Expose service `testLayer`s for tests, backed by `DB.testLayer` where database access is needed.
+- Expose service `testLayer`s for tests, backed by `DatabaseTest` where database access is needed.
 - Run migrations against the test database before DB tests and reset affected tables between tests.
-- Use Drizzle queries for test setup and cleanup where possible.
-- Avoid raw SQL unless a migration or lifecycle task requires it.
+- Use parameterized Effect SQL for queries, test setup, and cleanup.
 
 ## Checks
 
@@ -132,9 +124,6 @@ Before implementing or substantially refactoring one of the areas below, read th
 | HttpApi contract      | `src/agent-examples/service/api.group.ts`   |
 | HttpApi handlers      | `src/agent-examples/service/api.builder.ts` |
 | Root API registration | `src/agent-examples/service/api-entry.ts`   |
-| Client atoms          | `src/agent-examples/service/atom.ts`        |
-| Forms                 | `src/agent-examples/service/form.tsx`       |
-| Tables                | `src/agent-examples/service/table.tsx`      |
 
 <!-- intent-skills:start -->
 

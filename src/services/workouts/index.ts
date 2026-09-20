@@ -1,13 +1,14 @@
-import { and, desc, eq, gte, ilike, inArray, lte, sql } from "drizzle-orm";
-import { Context, Effect, Layer } from "effect";
+import { Context, Effect, Layer, Option, Schema } from "effect";
+import { SqlClient, SqlSchema } from "effect/unstable/sql";
 
-import { workouts as workoutTable } from "@/db/schema";
-import { DB } from "@/services/database";
+import { DatabaseLive, DatabaseTest } from "@/db";
 import {
+  Workout,
   WorkoutDataError,
-  type Workout,
-  type WorkoutPayload,
-  type WorkoutSummary,
+  WorkoutIdParams,
+  WorkoutPayload,
+  UpdateWorkoutRequest,
+  type WorkoutSearchInput,
 } from "./schema";
 
 type ListInput = {
@@ -19,301 +20,381 @@ type ListInput = {
 
 const databaseError = (message: string) => (cause: unknown) =>
   new WorkoutDataError({ message, cause });
+const decodeWorkouts = Schema.decodeUnknownEffect(Schema.Array(Workout));
 
-const plannedWorkoutMatchWindowMs = 12 * 60 * 60 * 1000;
-
-const fromRow = (row: typeof workoutTable.$inferSelect): Workout => ({
-  id: row.id,
-  activityType: row.activityType,
-  status: row.status === "planned" ? "planned" : "completed",
-  startDate: row.startDate,
-  endDate: row.endDate,
-  durationMinutes: row.durationMinutes,
-  sourceName: row.sourceName,
-  indoor: row.indoor,
-  ...(row.distanceKilometres === null
-    ? {}
-    : { distanceKilometres: row.distanceKilometres }),
-  ...(row.activeEnergyKilocalories === null
-    ? {}
-    : { activeEnergyKilocalories: row.activeEnergyKilocalories }),
-  ...(row.heartRateAverage === null ||
-  row.heartRateMinimum === null ||
-  row.heartRateMaximum === null
-    ? {}
-    : {
-        heartRate: {
-          average: row.heartRateAverage,
-          minimum: row.heartRateMinimum,
-          maximum: row.heartRateMaximum,
-        },
-      }),
-  ...(row.notes === null ? {} : { notes: row.notes }),
-});
-
-const payloadValues = (payload: WorkoutPayload) => ({
-  activityType: payload.activityType.trim(),
-  status: payload.status,
-  startDate: payload.startDate,
-  endDate: new Date(
-    Date.parse(payload.startDate) + payload.durationMinutes * 60_000,
-  ).toISOString(),
-  durationMinutes: payload.durationMinutes,
-  sourceName: "Manual",
-  indoor: payload.indoor ?? false,
-  distanceKilometres: payload.distanceKilometres ?? null,
-  notes: payload.notes?.trim() || null,
-  imported: false,
-  updatedAt: new Date().toISOString(),
-});
-
-export type WorkoutsService = {
-  readonly list: (
-    input: ListInput,
-  ) => Effect.Effect<ReadonlyArray<Workout>, WorkoutDataError>;
-  readonly summary: (input: {
-    readonly days?: number;
-  }) => Effect.Effect<WorkoutSummary, WorkoutDataError>;
-  readonly create: (
-    payload: WorkoutPayload,
-  ) => Effect.Effect<Workout, WorkoutDataError>;
-  readonly update: (input: {
-    readonly id: string;
-    readonly payload: WorkoutPayload;
-  }) => Effect.Effect<Workout | undefined, WorkoutDataError>;
-  readonly import: (
-    items: ReadonlyArray<Workout>,
-  ) => Effect.Effect<number, WorkoutDataError>;
+const weekRange = (date = new Date()) => {
+  const start = new Date(date);
+  start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 7);
+  return { start, end };
 };
 
-const make = Effect.gen(function* () {
-  const db = yield* DB;
+const findMatchingPlan = (
+  workout: Workout,
+  plans: ReadonlyArray<Workout>,
+  used: ReadonlySet<string>,
+) => {
+  const activity = workout.activityType.trim().toLowerCase();
+  const start = Date.parse(workout.startDate);
+  const matchWindow = 12 * 60 * 60 * 1000;
+  let closest: Workout | undefined;
+  let closestDifference = matchWindow + 1;
+  for (const plan of plans) {
+    if (
+      used.has(plan.id) ||
+      plan.activityType.trim().toLowerCase() !== activity
+    )
+      continue;
+    const difference = Math.abs(Date.parse(plan.startDate) - start);
+    if (difference <= matchWindow && difference < closestDifference) {
+      closest = plan;
+      closestDifference = difference;
+    }
+  }
+  return closest;
+};
 
-  const list = Effect.fn("Workouts.list")((input: ListInput) => {
-    const limit = Math.min(Math.max(input.limit ?? 20, 1), 500);
-    const filters = [
-      input.activityType
-        ? ilike(workoutTable.activityType, input.activityType)
-        : undefined,
-      input.after ? gte(workoutTable.startDate, input.after) : undefined,
-      input.before ? lte(workoutTable.startDate, input.before) : undefined,
-    ].filter((filter) => filter !== undefined);
+export class Workouts extends Context.Service<Workouts>()("Workouts", {
+  make: Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+    // JSON construction omits nullable optional fields and keeps the public schema unchanged.
+    const columns = sql`jsonb_strip_nulls(jsonb_build_object(
+    'id', id, 'activityType', activity_type, 'status', status,
+    'startDate', start_date, 'endDate', end_date, 'durationMinutes', duration_minutes,
+    'sourceName', source_name, 'indoor', indoor, 'distanceKilometres', distance_kilometres,
+    'activeEnergyKilocalories', active_energy_kilocalories, 'notes', notes,
+    'heartRate', CASE WHEN heart_rate_average IS NOT NULL AND heart_rate_minimum IS NOT NULL
+      AND heart_rate_maximum IS NOT NULL THEN jsonb_build_object(
+        'average', heart_rate_average, 'minimum', heart_rate_minimum, 'maximum', heart_rate_maximum)
+      ELSE NULL END
+  )) AS workout`;
+    const decodeRows = (rows: ReadonlyArray<{ readonly workout: unknown }>) =>
+      decodeWorkouts(rows.map((row) => row.workout));
 
-    return db
-      .select()
-      .from(workoutTable)
-      .where(filters.length === 0 ? undefined : and(...filters))
-      .orderBy(desc(workoutTable.startDate))
-      .limit(limit)
-      .pipe(
-        Effect.map((rows) => rows.map(fromRow)),
+    const workoutRow = Schema.Struct({ workout: Workout }).annotate({
+      identifier: "WorkoutRow",
+    });
+    const findOne = SqlSchema.findOneOption({
+      Request: WorkoutIdParams,
+      Result: workoutRow,
+      execute: ({ id }) =>
+        sql`SELECT ${columns} FROM workouts WHERE id = ${id}`,
+    });
+    const get = Effect.fn("Workouts.get")(
+      (input: typeof WorkoutIdParams.Type) =>
+        findOne(input).pipe(
+          Effect.map(Option.map((row) => row.workout)),
+          Effect.map(Option.getOrUndefined),
+          Effect.mapError(databaseError("Could not load workout")),
+        ),
+    );
+
+    const sortColumns = new Map([
+      ["startDate", sql`start_date`],
+      ["status", sql`status`],
+      ["activityType", sql`activity_type`],
+      ["durationMinutes", sql`duration_minutes`],
+      ["distanceKilometres", sql`coalesce(distance_kilometres, 0)`],
+      ["heartRate", sql`coalesce(heart_rate_average, 0)`],
+      ["notes", sql`coalesce(notes, '')`],
+    ]);
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+    const search = Effect.fn("Workouts.search")(
+      function* (input: WorkoutSearchInput) {
+        const filters = [sql`TRUE`];
+        if (input.week) {
+          const { start, end } = weekRange();
+          filters.push(
+            sql`start_date >= ${start.toISOString()}::timestamptz AND start_date < ${end.toISOString()}::timestamptz`,
+          );
+        }
+        if (input.after)
+          filters.push(sql`start_date >= ${input.after}::timestamptz`);
+        if (input.before)
+          filters.push(sql`start_date < ${input.before}::timestamptz`);
+        if (input.search)
+          filters.push(sql`strpos(lower(concat_ws(' ', activity_type, status, notes,
+      to_char(start_date AT TIME ZONE ${timeZone}, 'Mon FMDD, YYYY'), start_date::text)), ${input.search.toLowerCase()}) > 0`);
+        const where = sql.and(filters);
+        const [count] = yield* sql<{
+          total: number;
+        }>`SELECT count(*)::integer AS total FROM workouts WHERE ${where}`;
+        const total = count!.total;
+        const pageSize =
+          input.pageSize === null
+            ? null
+            : Math.max(1, Math.min(500, Math.floor(input.pageSize ?? 25)));
+        const pages =
+          pageSize === null ? 1 : Math.max(1, Math.ceil(total / pageSize));
+        const page = Math.min(pages, Math.max(1, Math.floor(input.page ?? 1)));
+        const sort = input.sort ?? "-startDate";
+        const column =
+          sortColumns.get(sort.replace(/^-/, "")) ?? sql`start_date`;
+        const direction = sort.startsWith("-") ? sql`DESC` : sql`ASC`;
+        const pagination =
+          pageSize === null
+            ? sql``
+            : sql`LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`;
+        const workouts = yield* sql<{
+          workout: unknown;
+        }>`SELECT ${columns} FROM workouts
+      WHERE ${where} ORDER BY ${column} ${direction}, start_date DESC, id ASC ${pagination}`.pipe(
+          Effect.flatMap(decodeRows),
+        );
+        return { workouts, total, page, pages };
+      },
+      Effect.mapError(databaseError("Could not search workouts")),
+    );
+
+    const schedule = Effect.fn("Workouts.schedule")(function* (input: {
+      readonly month?: string;
+      readonly search?: string;
+      readonly sort?: string;
+    }) {
+      const start = input.month
+        ? new Date(`${input.month}-01T00:00`)
+        : weekRange().start;
+      if (!Number.isFinite(start.getTime()))
+        return yield* new WorkoutDataError({
+          message: "Invalid schedule month",
+        });
+      if (input.month) start.setDate(1 - ((start.getDay() + 6) % 7));
+      const length = input.month ? 42 : 7;
+      const end = new Date(start);
+      end.setDate(end.getDate() + length);
+      const result = yield* search({
+        search: input.search,
+        sort: input.sort,
+        after: start.toISOString(),
+        before: end.toISOString(),
+        pageSize: null,
+      });
+      const days = Array.from({ length }, (_, index) => {
+        const date = new Date(start);
+        date.setDate(date.getDate() + index);
+        const next = new Date(date);
+        next.setDate(next.getDate() + 1);
+        return {
+          date,
+          workouts: result.workouts.filter((workout) => {
+            const time = Date.parse(workout.startDate);
+            return time >= date.getTime() && time < next.getTime();
+          }),
+        };
+      });
+      return { days, total: result.total };
+    });
+
+    const overview = Effect.fn("Workouts.overview")(
+      function* ({ activityType }: { readonly activityType: string }) {
+        const now = new Date();
+        const { start, end } = weekRange(now);
+        const [totals] = yield* sql<{
+          completedCount: number;
+          distanceKilometres: number;
+        }>`SELECT count(*)::integer AS "completedCount",
+      coalesce(sum(distance_kilometres) FILTER (WHERE activity_type IN ('Running', 'Cycling')), 0)::double precision AS "distanceKilometres"
+      FROM workouts WHERE status = 'completed' AND start_date >= ${start.toISOString()}::timestamptz AND start_date < ${end.toISOString()}::timestamptz`;
+        const [latest] = yield* sql<{
+          pace: number;
+        }>`SELECT duration_minutes / distance_kilometres AS pace FROM workouts
+      WHERE status = 'completed' AND activity_type = 'Running' AND distance_kilometres > 0 AND start_date <= ${now.toISOString()}::timestamptz
+      ORDER BY start_date DESC, id ASC LIMIT 1`;
+        const recent = yield* sql<{
+          workout: unknown;
+        }>`SELECT ${columns} FROM workouts
+      WHERE status = 'completed' AND activity_type = ${activityType} AND distance_kilometres > 0
+      ORDER BY start_date DESC, id ASC LIMIT 20`.pipe(
+          Effect.flatMap(decodeRows),
+        );
+        return {
+          completedCount: totals!.completedCount,
+          distanceKilometres: totals!.distanceKilometres,
+          currentPace: latest?.pace,
+          trends: [...recent].reverse(),
+        };
+      },
+      Effect.mapError(databaseError("Could not load training overview")),
+    );
+
+    const list = Effect.fn("Workouts.list")((input: ListInput) => {
+      const filters = [sql`TRUE`];
+      if (input.activityType)
+        filters.push(sql`activity_type ILIKE ${input.activityType}`);
+      if (input.after)
+        filters.push(sql`start_date >= ${input.after}::timestamptz`);
+      if (input.before)
+        filters.push(sql`start_date <= ${input.before}::timestamptz`);
+      return sql<{ workout: unknown }>`SELECT ${columns} FROM workouts
+      WHERE ${sql.and(filters)} ORDER BY start_date DESC
+      LIMIT ${Math.min(Math.max(input.limit ?? 20, 1), 500)}`.pipe(
+        Effect.flatMap(decodeRows),
         Effect.mapError(databaseError("Could not load workouts")),
       );
-  });
+    });
 
-  const summary = Effect.fn("Workouts.summary")((input: {
-    readonly days?: number;
-  }) => {
-    const days = Math.min(Math.max(input.days ?? 28, 1), 3650);
-    const cutoff = new Date(Date.now() - days * 86_400_000).toISOString();
-    return db
-      .select()
-      .from(workoutTable)
-      .where(
-        and(
-          gte(workoutTable.startDate, cutoff),
-          eq(workoutTable.status, "completed"),
-        ),
-      )
-      .pipe(
-        Effect.map((rows) => {
-          const byActivityType: Record<string, number> = {};
-          for (const row of rows) {
-            byActivityType[row.activityType] =
-              (byActivityType[row.activityType] ?? 0) + 1;
-          }
-          return {
-            days,
-            workoutCount: rows.length,
-            totalDurationMinutes: rows.reduce(
-              (total, row) => total + row.durationMinutes,
-              0,
-            ),
-            totalDistanceKilometres: rows.reduce(
-              (total, row) => total + (row.distanceKilometres ?? 0),
-              0,
-            ),
-            totalActiveEnergyKilocalories: rows.reduce(
-              (total, row) => total + (row.activeEnergyKilocalories ?? 0),
-              0,
-            ),
-            byActivityType,
-          };
-        }),
-        Effect.mapError(databaseError("Could not summarize workouts")),
-      );
-  });
+    const summary = Effect.fn("Workouts.summary")(
+      function* (input: { readonly days?: number }) {
+        const days = Math.min(Math.max(input.days ?? 28, 1), 3650);
+        const rows = yield* sql<{
+          workout: unknown;
+        }>`SELECT ${columns} FROM workouts
+      WHERE status = 'completed' AND start_date >= ${new Date(Date.now() - days * 86400000).toISOString()}::timestamptz`.pipe(
+          Effect.flatMap(decodeRows),
+        );
+        const byActivityType: Record<string, number> = {};
+        for (const row of rows)
+          byActivityType[row.activityType] =
+            (byActivityType[row.activityType] ?? 0) + 1;
+        return {
+          days,
+          workoutCount: rows.length,
+          totalDurationMinutes: rows.reduce(
+            (sum, row) => sum + row.durationMinutes,
+            0,
+          ),
+          totalDistanceKilometres: rows.reduce(
+            (sum, row) => sum + (row.distanceKilometres ?? 0),
+            0,
+          ),
+          totalActiveEnergyKilocalories: rows.reduce(
+            (sum, row) => sum + (row.activeEnergyKilocalories ?? 0),
+            0,
+          ),
+          byActivityType,
+        };
+      },
+      Effect.mapError(databaseError("Could not summarize workouts")),
+    );
 
-  const create = Effect.fn("Workouts.create")((payload: WorkoutPayload) =>
-    db
-      .insert(workoutTable)
-      .values({ id: crypto.randomUUID(), ...payloadValues(payload) })
-      .returning()
-      .pipe(
-        Effect.map(([row]) => fromRow(row!)),
+    const values = (payload: WorkoutPayload) => ({
+      activity_type: payload.activityType.trim(),
+      status: payload.status,
+      start_date: payload.startDate,
+      end_date: new Date(
+        Date.parse(payload.startDate) + payload.durationMinutes * 60000,
+      ).toISOString(),
+      duration_minutes: payload.durationMinutes,
+      source_name: "Manual",
+      indoor: payload.indoor ?? false,
+      distance_kilometres: payload.distanceKilometres ?? null,
+      notes: payload.notes?.trim() || null,
+      imported: false,
+      updated_at: new Date().toISOString(),
+    });
+
+    const insert = SqlSchema.findOne({
+      Request: WorkoutPayload,
+      Result: workoutRow,
+      execute: (payload) =>
+        sql`INSERT INTO workouts ${sql.insert({ id: crypto.randomUUID(), ...values(payload) })} RETURNING ${columns}`,
+    });
+    const create = Effect.fn("Workouts.create")((payload: WorkoutPayload) =>
+      insert(payload).pipe(
+        Effect.map((row) => row.workout),
         Effect.mapError(databaseError("Could not create workout")),
       ),
-  );
+    );
 
-  const update = Effect.fn("Workouts.update")(
-    ({
-      id,
-      payload,
-    }: {
-      readonly id: string;
-      readonly payload: WorkoutPayload;
-    }) =>
-      db
-        .update(workoutTable)
-        .set(payloadValues(payload))
-        .where(eq(workoutTable.id, id))
-        .returning()
-        .pipe(
-          Effect.map(([row]) => (row ? fromRow(row) : undefined)),
+    const updateRow = SqlSchema.findOneOption({
+      Request: UpdateWorkoutRequest,
+      Result: workoutRow,
+      execute: ({ id, payload }) =>
+        sql`UPDATE workouts SET ${sql.update(values(payload))} WHERE id = ${id} RETURNING ${columns}`,
+    });
+    const update = Effect.fn("Workouts.update")(
+      ({
+        id,
+        payload,
+      }: {
+        readonly id: string;
+        readonly payload: WorkoutPayload;
+      }) =>
+        updateRow({ id, payload }).pipe(
+          Effect.map(Option.map((row) => row.workout)),
+          Effect.map(Option.getOrUndefined),
           Effect.mapError(databaseError("Could not update workout")),
         ),
-  );
+    );
 
-  const importWorkouts = Effect.fn("Workouts.import")((
-    items: ReadonlyArray<Workout>,
-  ) => {
-    if (items.length === 0) return Effect.succeed(0);
-    return db
-      .transaction((tx) =>
-        Effect.gen(function* () {
-          const existingImports = yield* tx
-            .select({ id: workoutTable.id })
-            .from(workoutTable)
-            .where(eq(workoutTable.imported, true));
-          const existingImportIds = new Set(
-            existingImports.map((workout) => workout.id),
-          );
-          const plannedWorkouts = yield* tx
-            .select({
-              id: workoutTable.id,
-              activityType: workoutTable.activityType,
-              startDate: workoutTable.startDate,
-              notes: workoutTable.notes,
-            })
-            .from(workoutTable)
-            .where(eq(workoutTable.status, "planned"));
-
-          const usedPlanIds = new Set<string>();
-          const matchedPlans = new Map<
-            string,
-            (typeof plannedWorkouts)[number]
-          >();
-          for (const workout of items) {
-            if (existingImportIds.has(workout.id)) continue;
-
-            const workoutStart = Date.parse(workout.startDate);
-            let closestPlan: (typeof plannedWorkouts)[number] | undefined;
-            let closestDifference = plannedWorkoutMatchWindowMs + 1;
-            for (const plan of plannedWorkouts) {
-              if (
-                usedPlanIds.has(plan.id) ||
-                plan.activityType.trim().toLowerCase() !==
-                  workout.activityType.trim().toLowerCase()
-              ) {
-                continue;
-              }
-
-              const difference = Math.abs(
-                Date.parse(plan.startDate) - workoutStart,
+    const importWorkouts = Effect.fn("Workouts.import")(
+      (items: ReadonlyArray<Workout>) =>
+        sql
+          .withTransaction(
+            Effect.gen(function* () {
+              if (!items.length) return 0;
+              // Serialize imports so concurrent re-imports cannot consume the same planned session.
+              yield* sql`LOCK TABLE workouts IN SHARE ROW EXCLUSIVE MODE`;
+              const existing = yield* sql<{
+                id: string;
+              }>`SELECT id FROM workouts WHERE imported = TRUE`;
+              const existingIds = new Set(existing.map((row) => row.id));
+              const planned = yield* sql<{
+                workout: unknown;
+              }>`SELECT ${columns} FROM workouts WHERE status = 'planned'`.pipe(
+                Effect.flatMap(decodeRows),
               );
-              if (
-                difference <= plannedWorkoutMatchWindowMs &&
-                difference < closestDifference
-              ) {
-                closestPlan = plan;
-                closestDifference = difference;
+              const used = new Set<string>();
+              for (const workout of items) {
+                const plan = existingIds.has(workout.id)
+                  ? undefined
+                  : findMatchingPlan(workout, planned, used);
+                if (plan) {
+                  used.add(plan.id);
+                  yield* sql`DELETE FROM workouts WHERE id = ${plan.id}`;
+                }
+                yield* sql`INSERT INTO workouts ${sql.insert({
+                  id: workout.id,
+                  activity_type: workout.activityType,
+                  status: "completed",
+                  start_date: workout.startDate,
+                  end_date: workout.endDate,
+                  duration_minutes: workout.durationMinutes,
+                  source_name: workout.sourceName,
+                  indoor: workout.indoor,
+                  distance_kilometres: workout.distanceKilometres ?? null,
+                  active_energy_kilocalories:
+                    workout.activeEnergyKilocalories ?? null,
+                  heart_rate_average: workout.heartRate?.average ?? null,
+                  heart_rate_minimum: workout.heartRate?.minimum ?? null,
+                  heart_rate_maximum: workout.heartRate?.maximum ?? null,
+                  notes: workout.notes ?? plan?.notes ?? null,
+                  imported: true,
+                })} ON CONFLICT (id) DO UPDATE SET
+          activity_type = excluded.activity_type, status = 'completed',
+          start_date = excluded.start_date, end_date = excluded.end_date,
+          duration_minutes = excluded.duration_minutes, source_name = excluded.source_name,
+          indoor = excluded.indoor, imported = TRUE, updated_at = NOW(),
+          distance_kilometres = coalesce(excluded.distance_kilometres, workouts.distance_kilometres),
+          active_energy_kilocalories = coalesce(excluded.active_energy_kilocalories, workouts.active_energy_kilocalories),
+          heart_rate_average = coalesce(excluded.heart_rate_average, workouts.heart_rate_average),
+          heart_rate_minimum = coalesce(excluded.heart_rate_minimum, workouts.heart_rate_minimum),
+          heart_rate_maximum = coalesce(excluded.heart_rate_maximum, workouts.heart_rate_maximum)`;
+                existingIds.add(workout.id);
               }
-            }
+              return items.length;
+            }),
+          )
+          .pipe(Effect.mapError(databaseError("Could not import workouts"))),
+    );
 
-            if (closestPlan) {
-              usedPlanIds.add(closestPlan.id);
-              matchedPlans.set(workout.id, closestPlan);
-            }
-          }
-
-          if (usedPlanIds.size > 0) {
-            yield* tx
-              .delete(workoutTable)
-              .where(inArray(workoutTable.id, Array.from(usedPlanIds)));
-          }
-
-          const updatedAt = new Date().toISOString();
-          yield* tx
-            .insert(workoutTable)
-            .values(
-              items.map((workout) => ({
-                id: workout.id,
-                activityType: workout.activityType,
-                status: "completed",
-                startDate: workout.startDate,
-                endDate: workout.endDate,
-                durationMinutes: workout.durationMinutes,
-                sourceName: workout.sourceName,
-                indoor: workout.indoor,
-                distanceKilometres: workout.distanceKilometres ?? null,
-                activeEnergyKilocalories:
-                  workout.activeEnergyKilocalories ?? null,
-                heartRateAverage: workout.heartRate?.average ?? null,
-                heartRateMinimum: workout.heartRate?.minimum ?? null,
-                heartRateMaximum: workout.heartRate?.maximum ?? null,
-                notes:
-                  workout.notes ?? matchedPlans.get(workout.id)?.notes ?? null,
-                imported: true,
-                updatedAt,
-              })),
-            )
-            .onConflictDoUpdate({
-              target: workoutTable.id,
-              set: {
-                activityType: sql`excluded.activity_type`,
-                status: "completed",
-                startDate: sql`excluded.start_date`,
-                endDate: sql`excluded.end_date`,
-                durationMinutes: sql`excluded.duration_minutes`,
-                sourceName: sql`excluded.source_name`,
-                indoor: sql`excluded.indoor`,
-                distanceKilometres: sql`coalesce(excluded.distance_kilometres, ${workoutTable.distanceKilometres})`,
-                activeEnergyKilocalories: sql`coalesce(excluded.active_energy_kilocalories, ${workoutTable.activeEnergyKilocalories})`,
-                heartRateAverage: sql`coalesce(excluded.heart_rate_average, ${workoutTable.heartRateAverage})`,
-                heartRateMinimum: sql`coalesce(excluded.heart_rate_minimum, ${workoutTable.heartRateMinimum})`,
-                heartRateMaximum: sql`coalesce(excluded.heart_rate_maximum, ${workoutTable.heartRateMaximum})`,
-                imported: true,
-                updatedAt,
-              },
-            });
-
-          return items.length;
-        }),
-      )
-      .pipe(Effect.mapError(databaseError("Could not import workouts")));
-  });
-
-  return {
-    list,
-    summary,
-    create,
-    update,
-    import: importWorkouts,
-  } satisfies WorkoutsService;
-});
-
-export class Workouts extends Context.Service<Workouts, WorkoutsService>()(
-  "Workouts",
-) {}
-
-export const WorkoutsLive = Layer.effect(Workouts, make);
+    return {
+      get,
+      search,
+      schedule,
+      overview,
+      list,
+      summary,
+      create,
+      update,
+      import: importWorkouts,
+    };
+  }),
+}) {
+  static readonly baseLayer = Layer.effect(this, this.make);
+  static readonly layer = this.baseLayer.pipe(Layer.provide(DatabaseLive));
+  static readonly testLayer = this.baseLayer.pipe(Layer.provide(DatabaseTest));
+}
