@@ -27,143 +27,175 @@ export const WorkoutForm = ({
       ? new Date(`${initialDate}T09:00`)
       : new Date();
   return (
-    <section id="workout-form" class="card form-card">
-      <h2>{workout ? "Edit workout" : "Add workout"}</h2>
-      <p>Set the session timing and details for your training plan.</p>
-      <form
-        method="post"
-        action={action}
-        data-on:submit__prevent={`@post('${action}', {contentType: 'form'})`}
-        data-indicator:saving=""
+    <section id="workout-form">
+      <dialog
+        id="workout-dialog"
+        class="form-dialog"
+        open
+        aria-labelledby="workout-form-title"
+        aria-describedby="workout-form-description"
       >
-        {Object.entries(options).map(([key, entry]) => (
-          <input type="hidden" name={key} value={entry} />
-        ))}
-        <div class="form-grid">
-          <label>
-            Activity
-            <input
-              name="activityType"
-              list="activities"
-              value={value("activityType", workout?.activityType ?? "Running")}
-              required
-              maxlength="100"
-            />
-            <datalist id="activities">
-              <option>Running</option>
-              <option>Cycling</option>
-              <option>Walking</option>
-              <option>Swimming</option>
-            </datalist>
-          </label>
-          <label>
-            Status
-            <select name="status">
-              {["planned", "completed"].map((status) => (
+        <header class="dialog-heading">
+          <div>
+            <h2 id="workout-form-title">
+              {workout ? "Edit workout" : "Add workout"}
+            </h2>
+            <p id="workout-form-description">
+              Set the session timing and details for your training plan.
+            </p>
+          </div>
+          <a
+            class="dialog-close"
+            href={viewUrl(options)}
+            data-dialog-close=""
+            aria-label="Close workout form"
+          >
+            ×
+          </a>
+        </header>
+        <form
+          method="post"
+          action={action}
+          data-on:submit__prevent={`@post('${action}', {contentType: 'form'})`}
+          data-indicator:saving=""
+        >
+          {Object.entries(options).map(([key, entry]) => (
+            <input type="hidden" name={key} value={entry} />
+          ))}
+          <div class="form-grid">
+            <label>
+              Activity
+              <input
+                name="activityType"
+                autofocus
+                list="activities"
+                value={value(
+                  "activityType",
+                  workout?.activityType ?? "Running",
+                )}
+                required
+                maxlength="100"
+              />
+              <datalist id="activities">
+                <option>Running</option>
+                <option>Cycling</option>
+                <option>Walking</option>
+                <option>Swimming</option>
+              </datalist>
+            </label>
+            <label>
+              Status
+              <select name="status">
+                {["planned", "completed"].map((status) => (
+                  <option
+                    value={status}
+                    selected={
+                      value("status", workout?.status ?? "planned") === status
+                    }
+                  >
+                    {status === "planned" ? "Planned" : "Completed"}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Date
+              <input
+                type="datetime-local"
+                name="startDate"
+                value={value("startDate", localDateTime(date))}
+                required
+              />
+            </label>
+            <fieldset>
+              <legend>Duration</legend>
+              <div class="duration">
+                <label>
+                  Minutes
+                  <input
+                    type="number"
+                    name="minutes"
+                    min="0"
+                    step="1"
+                    value={value("minutes", Math.floor(totalSeconds / 60))}
+                    required
+                  />
+                </label>
+                <label>
+                  Seconds
+                  <input
+                    type="number"
+                    name="seconds"
+                    min="0"
+                    max="59"
+                    step="1"
+                    value={value("seconds", totalSeconds % 60)}
+                    required
+                  />
+                </label>
+              </div>
+            </fieldset>
+            <label>
+              Distance (km, optional)
+              <input
+                type="number"
+                name="distance"
+                min="0"
+                step="any"
+                value={value("distance", workout?.distanceKilometres ?? "")}
+              />
+            </label>
+            <label>
+              Location
+              <select name="indoor">
                 <option
-                  value={status}
+                  value="false"
                   selected={
-                    value("status", workout?.status ?? "planned") === status
+                    value("indoor", String(workout?.indoor ?? false)) ===
+                    "false"
                   }
                 >
-                  {status === "planned" ? "Planned" : "Completed"}
+                  Outdoors
                 </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Date
-            <input
-              type="datetime-local"
-              name="startDate"
-              value={value("startDate", localDateTime(date))}
-              required
-            />
-          </label>
-          <fieldset>
-            <legend>Duration</legend>
-            <div class="duration">
-              <label>
-                Minutes
-                <input
-                  type="number"
-                  name="minutes"
-                  min="0"
-                  step="1"
-                  value={value("minutes", Math.floor(totalSeconds / 60))}
-                  required
-                />
-              </label>
-              <label>
-                Seconds
-                <input
-                  type="number"
-                  name="seconds"
-                  min="0"
-                  max="59"
-                  step="1"
-                  value={value("seconds", totalSeconds % 60)}
-                  required
-                />
-              </label>
-            </div>
-          </fieldset>
-          <label>
-            Distance (km, optional)
-            <input
-              type="number"
-              name="distance"
-              min="0"
-              step="any"
-              value={value("distance", workout?.distanceKilometres ?? "")}
-            />
-          </label>
-          <label>
-            Location
-            <select name="indoor">
-              <option
-                value="false"
-                selected={
-                  value("indoor", String(workout?.indoor ?? false)) === "false"
-                }
-              >
-                Outdoors
-              </option>
-              <option
-                value="true"
-                selected={
-                  value("indoor", String(workout?.indoor ?? false)) === "true"
-                }
-              >
-                Indoors
-              </option>
-            </select>
-          </label>
-          <label class="wide">
-            Plan notes
-            <textarea name="notes" rows="3">
-              {value("notes", workout?.notes ?? "")}
-            </textarea>
-          </label>
-        </div>
-        {error ? (
-          <p role="alert" class="error">
-            {error}
-          </p>
-        ) : null}
-        <footer>
-          <a
-            class="button secondary"
-            href={viewUrl(options)}
-            data-on:click__prevent="document.getElementById('workout-form').innerHTML = ''"
-          >
-            Cancel
-          </a>
-          <button data-attr:disabled="$saving" type="submit">
-            Save workout
-          </button>
-        </footer>
-      </form>
+                <option
+                  value="true"
+                  selected={
+                    value("indoor", String(workout?.indoor ?? false)) === "true"
+                  }
+                >
+                  Indoors
+                </option>
+              </select>
+            </label>
+            <label class="wide">
+              Plan notes
+              <textarea name="notes" rows="3">
+                {value("notes", workout?.notes ?? "")}
+              </textarea>
+            </label>
+          </div>
+          {error ? (
+            <p role="alert" class="error" tabindex="-1">
+              {error}
+            </p>
+          ) : null}
+          <footer>
+            <a
+              class="button secondary"
+              href={viewUrl(options)}
+              data-dialog-close=""
+            >
+              Cancel
+            </a>
+            <button data-attr:disabled="$saving" type="submit">
+              <span data-show="!$saving">Save workout</span>
+              <span data-show="$saving" style="display: none">
+                Saving…
+              </span>
+            </button>
+          </footer>
+        </form>
+      </dialog>
     </section>
   );
 };

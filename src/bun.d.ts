@@ -13,3 +13,7 @@ declare module "*datastar.js" {
   const content: string;
   export default content;
 }
+declare module "*dialogs.js" {
+  const content: string;
+  export default content;
+}

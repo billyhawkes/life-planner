@@ -56,8 +56,18 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
             expect(formPage.headers.get("content-type")).toContain(
               "text/event-stream",
             );
-            expect(yield* Effect.promise(() => formPage.text())).toContain(
-              'id="workout-form"',
+            const formHtml = yield* Effect.promise(() => formPage.text());
+            expect(formHtml).toContain('id="workout-form"');
+            expect(formHtml).toContain('<dialog id="workout-dialog"');
+            expect(formHtml).toContain('aria-labelledby="workout-form-title"');
+            const tokens = yield* request("/open-props-1.7.23.min.css");
+            expect(tokens.headers.get("content-type")).toContain("text/css");
+            expect(yield* Effect.promise(() => tokens.text())).toContain(
+              "--size-3:",
+            );
+            const dialogs = yield* request("/dialogs.js");
+            expect(dialogs.headers.get("content-type")).toContain(
+              "text/javascript",
             );
             const script = yield* request("/datastar.js");
             expect(script.headers.get("content-type")).toContain(
@@ -90,6 +100,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
             expect(patch).toContain("event: datastar-patch-elements");
             expect(patch).toContain("&lt;script&gt;");
             expect(patch).not.toContain('<script>alert("x")</script>');
+            expect(patch).not.toContain("<dialog");
             const [workout] = yield* workouts.list({ activityType });
             expect(workout?.durationMinutes).toBe(30.75);
 

@@ -36,6 +36,7 @@ export const renderDashboard = (
           <p>Stored privately in your PostgreSQL database</p>
         </div>
         <a
+          id="add-workout"
           class="button"
           href={newUrl}
           data-on:click__prevent={`@get('${newUrl}')`}

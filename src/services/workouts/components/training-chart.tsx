@@ -80,8 +80,6 @@ export const TrainingChart = ({
           <polyline
             points={points.map(({ x, y }) => `${x},${y}`).join(" ")}
             fill="none"
-            stroke="currentColor"
-            stroke-width="3"
           />
           {points.map(({ x, y }, index) => (
             <circle cx={x} cy={y} r="4">
