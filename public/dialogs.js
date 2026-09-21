@@ -27,9 +27,11 @@ const restoreFocus = () => {
   const target =
     opener?.isConnected && opener !== document.body
       ? opener
-      : (Array.from(document.querySelectorAll("a[href]")).find(
+      : ((opener?.id ? document.getElementById(opener.id) : undefined) ??
+        Array.from(document.querySelectorAll("a[href]")).find(
           (link) => link.getAttribute("href") === opener?.getAttribute("href"),
-        ) ?? document.getElementById("add-workout"));
+        ) ??
+        document.getElementById("create-menu-trigger"));
   target?.focus({ preventScroll: true });
   opener = undefined;
 };
@@ -53,10 +55,54 @@ document.addEventListener("click", (event) => {
   if (link && !activeDialog) {
     const url = new URL(link.href);
     if (url.searchParams.has("new") || url.searchParams.has("edit")) {
-      opener = link;
+      opener =
+        link.closest(".create-menu")?.querySelector("[popovertarget]") ?? link;
+      link.closest(".create-menu-items:popover-open")?.hidePopover();
     }
   }
 });
+
+// Popovers use the top layer so calendar scrolling never clips the dropdown.
+const positionMenu = (menu) => {
+  const trigger = menu
+    .closest(".create-menu")
+    ?.querySelector("[popovertarget]");
+  if (!trigger) return;
+  const anchor = trigger.getBoundingClientRect();
+  const bounds = menu.getBoundingClientRect();
+  const left = Math.max(
+    8,
+    Math.min(anchor.right - bounds.width, window.innerWidth - bounds.width - 8),
+  );
+  const top =
+    anchor.bottom + bounds.height + 8 <= window.innerHeight
+      ? anchor.bottom + 4
+      : Math.max(8, anchor.top - bounds.height - 4);
+  Object.assign(menu.style, {
+    inset: "auto",
+    margin: "0",
+    left: `${left}px`,
+    top: `${top}px`,
+  });
+};
+document.addEventListener(
+  "toggle",
+  (event) => {
+    if (
+      event.newState === "open" &&
+      event.target instanceof HTMLElement &&
+      event.target.matches(".create-menu-items")
+    )
+      positionMenu(event.target);
+  },
+  true,
+);
+const positionOpenMenus = () =>
+  document
+    .querySelectorAll(".create-menu-items:popover-open")
+    .forEach(positionMenu);
+window.addEventListener("resize", positionOpenMenus);
+document.addEventListener("scroll", positionOpenMenus, true);
 
 const syncDialog = () => {
   const dialog = document.querySelector(".form-dialog[open]");

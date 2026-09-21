@@ -2,8 +2,8 @@
 
 A local Apple Health workout dashboard built with **Bun, Effect, and Datastar**.
 Plan and edit workouts, review weekly sessions, browse a calendar, and compare
-running/cycling pace and distance. The log includes search, sorting, pagination,
-and CSV export. The dashboard displays the latest 500 workouts.
+running/cycling pace and distance. Search workouts and daily habits, displayed
+as cards grouped by day.
 
 The server renders TSX templates to HTML with plain CSS. Datastar submits forms and applies HTML
 patches over SSE. PostgreSQL access and migrations use Effect SQL. The UI is

@@ -381,6 +381,20 @@ export class Workouts extends Context.Service<Workouts>()("Workouts", {
           .pipe(Effect.mapError(databaseError("Could not import workouts"))),
     );
 
+    const removeQuery = SqlSchema.findAll({
+      Request: WorkoutIdParams,
+      Result: WorkoutIdParams,
+      execute: ({ id }) =>
+        sql`DELETE FROM workouts WHERE id = ${id} RETURNING id`,
+    });
+    const remove = Effect.fn("Workouts.remove")(
+      (input: { readonly id: string }) =>
+        removeQuery(input).pipe(
+          Effect.map((rows) => rows.length > 0),
+          Effect.mapError(databaseError("Could not delete workout")),
+        ),
+    );
+
     return {
       get,
       search,
@@ -390,6 +404,7 @@ export class Workouts extends Context.Service<Workouts>()("Workouts", {
       summary,
       create,
       update,
+      remove,
       import: importWorkouts,
     };
   }),

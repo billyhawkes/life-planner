@@ -4,60 +4,16 @@ import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi";
 
 import { AppApi } from "@/api";
 import { patchElements } from "@/lib/datastar";
-import { renderDashboard, type DashboardData } from "@/routes/workouts";
+import { renderDashboard } from "@/routes/workouts";
+import { loadDashboard } from "@/services/planner/dashboard";
+import { isDatastar, sse } from "@/lib/browser";
 import { renderDocument } from "@/routes/document";
 import { renderLoadError } from "@/routes/error";
+import { PlannerFeedback } from "@/routes/components/feedback";
 import { Workouts } from "./index";
-import { decodeWorkoutForm, type WorkoutDataError } from "./schema";
+import { decodeWorkoutForm } from "./schema";
 import { WorkoutForm } from "./components/form";
-import { readOptions, viewUrl, workoutsCsv, type ViewOptions } from "./helpers";
-
-const isDatastar = (request: HttpServerRequest.HttpServerRequest) =>
-  request.headers["datastar-request"] === "true";
-const sse = (events: ReadonlyArray<string>) =>
-  HttpServerResponse.text(events.join(""), {
-    contentType: "text/event-stream",
-    headers: { "Cache-Control": "no-cache" },
-  });
-
-const loadDashboard = (
-  options: ViewOptions,
-): Effect.Effect<DashboardData, WorkoutDataError, Workouts> =>
-  Effect.gen(function* () {
-    const service = yield* Workouts;
-    switch (options.view) {
-      case "overview":
-        return {
-          view: "overview",
-          overview: yield* service.overview({
-            activityType:
-              options.activity === "cycling" ? "Cycling" : "Running",
-          }),
-        };
-      case "calendar":
-        return {
-          view: "calendar",
-          schedule: yield* service.schedule({ month: options.month }),
-        };
-      case "week":
-        return {
-          view: "week",
-          schedule: yield* service.schedule({
-            search: options.search,
-            sort: options.sort,
-          }),
-        };
-      default:
-        return {
-          view: "table",
-          page: yield* service.search({
-            search: options.search,
-            sort: options.sort,
-            page: options.page,
-          }),
-        };
-    }
-  });
+import { readOptions, viewUrl } from "./helpers";
 
 const page = (query: Record<string, string>) =>
   Effect.gen(function* () {
@@ -152,40 +108,54 @@ const save = (values: Record<string, string>, id?: string) =>
     ),
   );
 
-const exportCsv = (query: Record<string, string>) =>
+const internalServerError = () => new HttpApiError.InternalServerError({});
+
+const remove = (id: string, values: Record<string, string>) =>
   Effect.gen(function* () {
-    const options = readOptions(query);
+    const request = yield* HttpServerRequest.HttpServerRequest;
+    const options = readOptions(values);
     const service = yield* Workouts;
-    const { workouts } = yield* service.search({
-      search: options.search,
-      sort: options.sort,
-      week: options.view === "week",
-      pageSize: null,
-    });
-    return HttpServerResponse.text(workoutsCsv(workouts), {
-      contentType: "text/csv",
-      headers: {
-        "Content-Disposition":
-          'attachment; filename="apple-health-workouts.csv"',
-      },
-    });
+    const removed = yield* service.remove({ id });
+    if (!removed) {
+      return isDatastar(request)
+        ? sse([
+            patchElements(PlannerFeedback({ message: "Workout not found." })),
+          ])
+        : HttpServerResponse.text("Workout not found.", { status: 404 });
+    }
+    if (!isDatastar(request))
+      return HttpServerResponse.redirect(viewUrl(options), { status: 303 });
+    return sse([
+      patchElements(renderDashboard(yield* loadDashboard(options), options)),
+    ]);
   }).pipe(
-    Effect.catch(() =>
-      Effect.succeed(
-        HttpServerResponse.text("Workout data could not be loaded.", {
-          status: 500,
-        }),
-      ),
+    Effect.catch((error) =>
+      Effect.gen(function* () {
+        yield* Effect.logError(error);
+        const request = yield* HttpServerRequest.HttpServerRequest;
+        const message = "The workout could not be deleted. Please try again.";
+        return isDatastar(request)
+          ? sse([patchElements(PlannerFeedback({ message }))])
+          : HttpServerResponse.text(message, { status: 500 });
+      }),
     ),
   );
-
-const internalServerError = () => new HttpApiError.InternalServerError({});
 
 export const workoutsHandler = HttpApiBuilder.group(
   AppApi,
   "workouts",
   (handlers) =>
     handlers
+      .handle("deleteWorkout", ({ params }) =>
+        Effect.gen(function* () {
+          const workouts = yield* Workouts;
+          const removed = yield* workouts
+            .remove(params)
+            .pipe(Effect.mapError(internalServerError));
+          if (!removed) return yield* new HttpApiError.NotFound({});
+        }),
+      )
+      .handle("delete", ({ params, payload }) => remove(params.id, payload))
       .handle("listWorkouts", ({ query }) =>
         Effect.gen(function* () {
           const workouts = yield* Workouts;
@@ -226,7 +196,6 @@ export const workoutsHandler = HttpApiBuilder.group(
         ),
       )
       .handle("page", ({ query }) => page(query))
-      .handle("exportCsv", ({ query }) => exportCsv(query))
       .handle("create", ({ payload }) => save(payload))
       .handle("update", ({ params, payload }) => save(payload, params.id)),
 );

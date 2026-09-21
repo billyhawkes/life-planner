@@ -31,6 +31,26 @@ const initial = Effect.gen(function* () {
     ALTER COLUMN end_date TYPE TIMESTAMPTZ USING end_date::TIMESTAMPTZ`;
 });
 
+const habits = Effect.gen(function* () {
+  const sql = yield* SqlClient.SqlClient;
+  yield* sql`CREATE TABLE habits (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    start_date DATE NOT NULL,
+    notes TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`;
+  yield* sql`CREATE TABLE habit_completions (
+    habit_id TEXT NOT NULL REFERENCES habits(id) ON DELETE CASCADE,
+    date DATE NOT NULL,
+    completed BOOLEAN NOT NULL DEFAULT TRUE,
+    PRIMARY KEY (habit_id, date)
+  )`;
+});
+
 export const migrate = Migrator.make({})({
-  loader: Migrator.fromRecord({ "001_workouts": initial }),
+  loader: Migrator.fromRecord({
+    "001_workouts": initial,
+    "002_habits": habits,
+  }),
 });

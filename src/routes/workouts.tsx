@@ -1,81 +1,134 @@
 import type { Html } from "@/lib/datastar";
-import type {
-  WorkoutOverview,
-  WorkoutPage,
-  WorkoutSchedule,
-} from "@/services/workouts/schema";
-import { WorkoutCalendar } from "@/services/workouts/components/calendar";
+import { ScheduleDays } from "./components/schedule";
+import type { DashboardData } from "@/services/planner/dashboard";
+import { PlannerCalendar } from "./components/calendar";
+import { CreateMenu } from "./components/create-menu";
+import { PlannerFeedback } from "./components/feedback";
+import { Icon } from "./components/icon";
+import { HabitCard } from "@/services/habits/components/card";
 import { Link } from "@/services/workouts/components/links";
-import { WorkoutTable } from "@/services/workouts/components/table";
+import { WorkoutCard } from "@/services/workouts/components/card";
 import { TrainingChart } from "@/services/workouts/components/training-chart";
 import {
   formatNumber,
   formatPace,
+  dateKey,
   viewUrl,
   type ViewOptions,
 } from "@/services/workouts/helpers";
 
-export type DashboardData =
-  | { readonly view: "overview"; readonly overview: WorkoutOverview }
-  | { readonly view: "calendar"; readonly schedule: WorkoutSchedule }
-  | { readonly view: "week"; readonly schedule: WorkoutSchedule }
-  | { readonly view: "table"; readonly page: WorkoutPage };
+const plannerViews: ReadonlyArray<readonly [ViewOptions["view"], string]> = [
+  ["today", "Today"],
+  ["week", "This Week"],
+  ["calendar", "Calendar"],
+  ["stats", "Stats"],
+];
 
 export const renderDashboard = (
   data: DashboardData,
   options: ViewOptions,
   form: Html = <section id="workout-form" />,
+  habitForm: Html = <section id="habit-form" />,
 ) => {
-  const newUrl = `${viewUrl(options)}&new=true`;
+  const compact = data.view === "calendar";
+  const days =
+    data.view === "stats"
+      ? []
+      : data.days.map(({ date, workouts, habits }) => {
+          return {
+            date,
+            actions: <CreateMenu options={options} date={dateKey(date)} />,
+            content: (
+              <div class="day-cards">
+                {workouts.map((workout) => (
+                  <WorkoutCard
+                    workout={workout}
+                    options={options}
+                    compact={compact}
+                  />
+                ))}
+                {habits.map((occurrence) => (
+                  <HabitCard
+                    occurrence={occurrence}
+                    options={options}
+                    compact={compact}
+                  />
+                ))}
+                {!compact && workouts.length === 0 && habits.length === 0 ? (
+                  <p class="day-empty">
+                    {options.search
+                      ? "No matching workouts or habits."
+                      : "Nothing planned for this day."}
+                  </p>
+                ) : null}
+              </div>
+            ),
+          };
+        });
   return (
     <main id="dashboard">
-      <header class="page-heading">
-        <div>
-          <p class="eyebrow">Training Ledger</p>
-          <h1>Workouts</h1>
-          <p>Stored privately in your PostgreSQL database</p>
-        </div>
-        <a
-          id="add-workout"
-          class="button"
-          href={newUrl}
-          data-on:click__prevent={`@get('${newUrl}')`}
-        >
-          + Add workout
-        </a>
+      <header class="planner-topbar">
+        <nav class="tabs" aria-label="Planner views">
+          {plannerViews.map(([view, label]) => (
+            <Link
+              label={label}
+              url={viewUrl(options, { view, page: 1 })}
+              active={data.view === view}
+            />
+          ))}
+        </nav>
+        {data.view !== "stats" ? (
+          <form
+            class="planner-search"
+            role="search"
+            method="get"
+            action="/workouts"
+          >
+            {Object.entries(options)
+              .filter(([key]) => key !== "search")
+              .map(([key, value]) => (
+                <input type="hidden" name={key} value={value} />
+              ))}
+            <input
+              type="search"
+              name="search"
+              value={options.search}
+              placeholder="Search plans…"
+              aria-label="Search workouts and habits"
+            />
+            <button
+              type="submit"
+              class="search-button"
+              aria-label="Search workouts and habits"
+              title="Search"
+            >
+              <Icon name="search" />
+            </button>
+          </form>
+        ) : null}
+        <CreateMenu options={options} />
       </header>
-      <nav class="tabs" aria-label="Workout views">
-        {[
-          ["overview", "Overview"],
-          ["week", "Week log"],
-          ["table", "Log"],
-          ["calendar", "Calendar"],
-        ].map(([view, label]) => (
-          <Link
-            label={label}
-            url={viewUrl(options, { view, page: 1 })}
-            active={data.view === view}
-          />
-        ))}
-      </nav>
       {form}
-      {data.view === "overview" ? (
-        <>
+      {habitForm}
+      <PlannerFeedback />
+      {data.view === "stats" ? (
+        <section class="stats-section" aria-labelledby="workout-overview-title">
+          <h2 id="workout-overview-title">Workout overview</h2>
           <section class="stats" aria-label="Current training overview">
             <article class="card">
-              <h2>Workouts this week</h2>
+              <h3>Workouts this week</h3>
               <strong>{data.overview.completedCount}</strong>
               <p>completed sessions</p>
             </article>
             <article class="card">
-              <h2>Distance this week</h2>
+              <h3>Distance this week</h3>
               <strong>
                 {formatNumber(data.overview.distanceKilometres)} km
               </strong>
               <p>Running and cycling</p>
             </article>
             <article class="card">
-              <h2>Current running pace</h2>
+              <h3>Current running pace</h3>
               <strong>
                 {data.overview.currentPace === undefined
                   ? "—"
@@ -85,69 +138,12 @@ export const renderDashboard = (
             </article>
           </section>
           <TrainingChart workouts={data.overview.trends} options={options} />
-        </>
+        </section>
       ) : data.view === "calendar" ? (
-        <WorkoutCalendar days={data.schedule.days} options={options} />
+        <PlannerCalendar days={days} options={options} />
       ) : (
-        <section class="card">
-          <form class="toolbar" method="get" action="/workouts">
-            <input type="hidden" name="view" value={data.view} />
-            <input type="hidden" name="sort" value={options.sort} />
-            <label>
-              Search workouts
-              <input
-                type="search"
-                name="search"
-                value={options.search}
-                placeholder="Activity, status, notes…"
-              />
-            </label>
-            <button type="submit">Search</button>
-            <a
-              href={viewUrl(options).replace("/workouts?", "/workouts/export?")}
-            >
-              Export CSV
-            </a>
-            <span>
-              {data.view === "week" ? data.schedule.total : data.page.total}{" "}
-              workouts
-            </span>
-          </form>
-          {data.view === "week" ? (
-            data.schedule.days.map(({ date, workouts }) => (
-              <>
-                <h3>
-                  {date.toLocaleDateString("en", {
-                    weekday: "long",
-                    month: "short",
-                    day: "numeric",
-                  })}
-                </h3>
-                <WorkoutTable workouts={workouts} options={options} />
-              </>
-            ))
-          ) : (
-            <WorkoutTable workouts={data.page.workouts} options={options} />
-          )}
-          {data.view === "table" ? (
-            <footer>
-              {data.page.page > 1 ? (
-                <Link
-                  label="← Previous"
-                  url={viewUrl(options, { page: data.page.page - 1 })}
-                />
-              ) : null}
-              <span>
-                Page {data.page.page} of {data.page.pages}
-              </span>
-              {data.page.page < data.page.pages ? (
-                <Link
-                  label="Next →"
-                  url={viewUrl(options, { page: data.page.page + 1 })}
-                />
-              ) : null}
-            </footer>
-          ) : null}
+        <section class="daily-plans" aria-label="Daily plans">
+          <ScheduleDays days={days} />
         </section>
       )}
     </main>

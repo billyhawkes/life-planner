@@ -1,7 +1,7 @@
 import type { Workout } from "./schema";
 
 export type ViewOptions = {
-  readonly view: string;
+  readonly view: "today" | "week" | "calendar" | "stats";
   readonly activity: string;
   readonly metric: string;
   readonly month: string;
@@ -16,14 +16,17 @@ export type WorkoutsProps = {
 };
 
 export const readOptions = (values: Record<string, string>): ViewOptions => ({
-  view: ["overview", "week", "table", "calendar"].includes(values.view)
-    ? values.view
-    : "overview",
+  view:
+    values.view === "overview" || values.view === "stats"
+      ? "stats"
+      : values.view === "week" || values.view === "calendar"
+        ? values.view
+        : "today",
   activity: values.activity === "cycling" ? "cycling" : "running",
   metric: values.metric === "distance" ? "distance" : "pace",
   month: /^\d{4}-(0[1-9]|1[0-2])$/.test(values.month ?? "")
     ? values.month
-    : new Date().toISOString().slice(0, 7),
+    : dateKey(new Date()).slice(0, 7),
   search: values.search ?? "",
   sort: values.sort ?? "-startDate",
   page: Math.max(1, Math.min(100000, Math.floor(Number(values.page) || 1))),
@@ -52,31 +55,3 @@ export const viewUrl = (
   changes: Partial<ViewOptions> = {},
 ) =>
   `/workouts?${new URLSearchParams(Object.entries({ ...options, ...changes }).map(([key, value]) => [key, String(value)]))}`;
-
-export const workoutsCsv = (workouts: ReadonlyArray<Workout>) => {
-  const cell = (value: unknown) => {
-    const text = String(value ?? "");
-    return `"${(/^[=+@\-\t\r]/.test(text) ? `'${text}` : text).replaceAll('"', '""')}"`;
-  };
-  const rows = [
-    [
-      "Status",
-      "Date",
-      "Activity",
-      "Duration (min)",
-      "Distance (km)",
-      "Avg. heart rate",
-      "Notes",
-    ],
-    ...workouts.map((workout) => [
-      workout.status,
-      workout.startDate,
-      workout.activityType,
-      workout.durationMinutes,
-      workout.distanceKilometres,
-      workout.heartRate?.average,
-      workout.notes,
-    ]),
-  ];
-  return rows.map((row) => row.map(cell).join(",")).join("\r\n");
-};

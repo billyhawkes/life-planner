@@ -10,7 +10,11 @@ export const Link = ({
   readonly url: string;
   readonly active?: boolean;
 }) => (
-  <a class={active ? "active" : ""} href={url}>
+  <a
+    class={active ? "active" : ""}
+    href={url}
+    aria-current={active ? "page" : undefined}
+  >
     {label}
   </a>
 );

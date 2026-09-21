@@ -7,6 +7,8 @@ import { SqlClient } from "effect/unstable/sql";
 import { applicationRoutes } from "@/app";
 import { DatabaseTest } from "@/db";
 import { Workouts } from "@/services/workouts";
+import { Habits } from "@/services/habits";
+import { dateKey, localDateTime } from "@/services/workouts/helpers";
 
 describe.skipIf(!process.env.TEST_DATABASE_URL)(
   "Bun HTTP and Datastar integration",
@@ -18,17 +20,25 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
           Effect.gen(function* () {
             const sql = yield* SqlClient.SqlClient;
             const workouts = yield* Workouts;
+            const habits = yield* Habits;
             const activityType = `http-test-${crypto.randomUUID()}`;
             yield* Effect.addFinalizer(() =>
               sql`DELETE FROM workouts WHERE activity_type = ${activityType}`.pipe(
                 Effect.orDie,
               ),
             );
+            const habitName = `habit-http-${crypto.randomUUID()}`;
+            yield* Effect.addFinalizer(() =>
+              sql`DELETE FROM habits WHERE name = ${habitName}`.pipe(
+                Effect.orDie,
+              ),
+            );
             const web = HttpRouter.toWebHandler(
               applicationRoutes.pipe(
                 HttpRouter.provideRequest(
-                  Layer.merge(
+                  Layer.mergeAll(
                     Layer.succeed(Workouts, workouts),
+                    Layer.succeed(Habits, habits),
                     Layer.succeed(SqlClient.SqlClient, sql),
                   ),
                 ),
@@ -45,12 +55,18 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
             const root = yield* request("/");
             expect(root.status).toBe(303);
             expect(root.headers.get("location")).toBe("/workouts");
-            const page = yield* request("/workouts?view=table");
+            const page = yield* request("/workouts?view=week");
             expect(page.status).toBe(200);
             expect(yield* Effect.promise(() => page.text())).toContain(
               'id="dashboard"',
             );
-            const formPage = yield* request("/workouts?view=table&new=true", {
+            const stats = yield* request("/workouts?view=stats");
+            expect(stats.status).toBe(200);
+            const statsHtml = yield* Effect.promise(() => stats.text());
+            expect(statsHtml).toContain("Workout overview</h2>");
+            expect(statsHtml).toContain("Training trends</h3>");
+            expect(statsHtml).not.toContain("All workouts");
+            const formPage = yield* request("/workouts?view=week&new=true", {
               headers: { "Datastar-Request": "true" },
             });
             expect(formPage.headers.get("content-type")).toContain(
@@ -80,12 +96,12 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
             const form = {
               activityType,
               status: "planned",
-              startDate: "2026-09-20T09:00",
+              startDate: localDateTime(new Date()),
               minutes: "30",
               seconds: "45",
               distance: "5",
               notes: '<script>alert("x")</script>',
-              view: "table",
+              view: "week",
             };
             const created = yield* request("/workouts", {
               method: "POST",
@@ -139,6 +155,131 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
               "Changed",
             );
 
+            const habitDialog = yield* request(
+              "/habits/new?view=today&new=true",
+              { headers: { "Datastar-Request": "true" } },
+            );
+            expect(habitDialog.headers.get("content-type")).toContain(
+              "text/event-stream",
+            );
+            expect(yield* Effect.promise(() => habitDialog.text())).toContain(
+              '<dialog id="habit-dialog"',
+            );
+            const habitForm = {
+              name: habitName,
+              startDate: dateKey(new Date()),
+              notes: "<script>habit</script>",
+              view: "today",
+            };
+            const invalidHabit = yield* request("/habits", {
+              method: "POST",
+              body: new URLSearchParams({ ...habitForm, name: " " }),
+            });
+            expect(invalidHabit.status).toBe(400);
+            expect(yield* Effect.promise(() => invalidHabit.text())).toContain(
+              'role="alert"',
+            );
+            const createdHabit = yield* request("/habits", {
+              method: "POST",
+              body: new URLSearchParams(habitForm),
+              headers: { "Datastar-Request": "true" },
+            });
+            const habitPatch = yield* Effect.promise(() => createdHabit.text());
+            expect(habitPatch).toContain("event: datastar-patch-elements");
+            expect(habitPatch).toContain(habitName);
+            expect(habitPatch).toContain("&lt;script&gt;habit&lt;/script&gt;");
+            expect(habitPatch).not.toContain("<dialog");
+            expect(habitPatch).not.toContain("<table");
+            const habit = (yield* habits.list({})).find(
+              (item) => item.name === habitName,
+            )!;
+            const completionFields = {
+              view: "today",
+              date: habitForm.startDate,
+              completed: "true",
+            };
+            const completion = yield* request(
+              `/habits/${habit.id}/completion`,
+              {
+                method: "POST",
+                body: new URLSearchParams(completionFields),
+                headers: { "Datastar-Request": "true" },
+              },
+            );
+            expect(yield* Effect.promise(() => completion.text())).toContain(
+              `Mark incomplete: ${habitName}`,
+            );
+            const undo = yield* request(`/habits/${habit.id}/completion`, {
+              method: "POST",
+              body: new URLSearchParams({
+                ...completionFields,
+                completed: "false",
+              }),
+            });
+            expect(undo.status).toBe(303);
+            expect(undo.headers.get("location")).toContain("view=today");
+            const calendar = yield* request(
+              `/workouts?view=calendar&month=${habitForm.startDate.slice(0, 7)}`,
+            );
+            const calendarHtml = yield* Effect.promise(() => calendar.text());
+            expect(calendarHtml).toContain(habitName);
+            expect(calendarHtml).toContain(
+              `id="create-menu-trigger-${habitForm.startDate}"`,
+            );
+            expect(calendarHtml).toContain(
+              `popovertarget="create-menu-items-${habitForm.startDate}"`,
+            );
+            const datedHabitDialog = yield* request(
+              "/habits/new?view=calendar&new=2026-10-04",
+              { headers: { "Datastar-Request": "true" } },
+            );
+            expect(
+              yield* Effect.promise(() => datedHabitDialog.text()),
+            ).toContain('name="startDate" value="2026-10-04"');
+            const datedWorkoutDialog = yield* request(
+              "/workouts?view=calendar&new=2026-10-04",
+              { headers: { "Datastar-Request": "true" } },
+            );
+            expect(
+              yield* Effect.promise(() => datedWorkoutDialog.text()),
+            ).toContain('name="startDate" value="2026-10-04T09:00"');
+            const week = yield* request(
+              `/workouts?view=week&search=${habitName}`,
+            );
+            const weekHtml = yield* Effect.promise(() => week.text());
+            expect(weekHtml).toContain(habitName);
+            expect(
+              weekHtml.match(/class="day-create-button secondary"/g),
+            ).toHaveLength(7);
+            const todayPage = yield* request("/workouts?view=today");
+            expect(
+              (yield* Effect.promise(() => todayPage.text())).match(
+                /class="day-create-button secondary"/g,
+              ),
+            ).toHaveLength(1);
+            const missingHabit = yield* request(
+              "/habits/missing-habit/completion",
+              { method: "POST", body: new URLSearchParams(completionFields) },
+            );
+            expect(missingHabit.status).toBe(404);
+            const missingHabitPatch = yield* request(
+              "/habits/missing-habit/completion",
+              {
+                method: "POST",
+                body: new URLSearchParams(completionFields),
+                headers: { "Datastar-Request": "true" },
+              },
+            );
+            expect(
+              yield* Effect.promise(() => missingHabitPatch.text()),
+            ).toContain('id="planner-feedback"');
+            const nativeHabit = yield* request("/habits", {
+              method: "POST",
+              body: new URLSearchParams(habitForm),
+            });
+            expect(nativeHabit.status).toBe(303);
+            expect(nativeHabit.headers.get("location")).toContain("view=today");
+
             const api = yield* request(
               `/api/workouts?limit=1&activityType=${activityType}`,
             );
@@ -162,21 +303,71 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
             const specification = yield* request("/api/openapi.json");
             const spec = yield* Effect.promise(() => specification.json());
             expect(Object.keys(spec.paths).sort()).toEqual([
+              "/api/habits",
+              "/api/habits/{id}",
+              "/api/habits/{id}/completion",
               "/api/workouts",
               "/api/workouts/summary",
               "/api/workouts/{id}",
             ]);
-            const csv = yield* request(
-              `/workouts/export?search=${activityType}`,
+            const deletedWorkout = yield* request(
+              `/workouts/${workout.id}/delete`,
+              {
+                method: "POST",
+                body: new URLSearchParams({ view: "week" }),
+                headers: { "Datastar-Request": "true" },
+              },
             );
-            expect(csv.headers.get("content-type")).toContain("text/csv");
-            expect(yield* Effect.promise(() => csv.text())).toContain(
-              activityType,
+            expect(deletedWorkout.headers.get("content-type")).toContain(
+              "text/event-stream",
+            );
+            expect(
+              yield* Effect.promise(() => deletedWorkout.text()),
+            ).not.toContain(activityType);
+            expect(yield* workouts.get({ id: workout.id })).toBeUndefined();
+            expect(
+              (yield* request(`/api/workouts/${workout.id}`, {
+                method: "DELETE",
+              })).status,
+            ).toBe(404);
+            const deletedHabit = yield* request(`/habits/${habit.id}/delete`, {
+              method: "POST",
+              body: new URLSearchParams({
+                view: "calendar",
+                month: habitForm.startDate.slice(0, 7),
+              }),
+              headers: { "Datastar-Request": "true" },
+            });
+            expect(deletedHabit.headers.get("content-type")).toContain(
+              "text/event-stream",
+            );
+            expect(
+              yield* Effect.promise(() => deletedHabit.text()),
+            ).not.toContain(`/habits/${habit.id}/completion`);
+            expect(
+              (yield* request(`/api/habits/${habit.id}`, { method: "DELETE" }))
+                .status,
+            ).toBe(404);
+            const nativeCreated = (yield* habits.list({})).find(
+              (item) => item.name === habitName,
+            )!;
+            const nativeDeleted = yield* request(
+              `/habits/${nativeCreated.id}/delete`,
+              {
+                method: "POST",
+                body: new URLSearchParams({ view: "today" }),
+              },
+            );
+            expect(nativeDeleted.status).toBe(303);
+            expect(nativeDeleted.headers.get("location")).toContain(
+              "view=today",
             );
           }).pipe(
             Effect.scoped,
             Effect.provide(
-              Workouts.baseLayer.pipe(Layer.provideMerge(DatabaseTest)),
+              Layer.merge(Workouts.baseLayer, Habits.baseLayer).pipe(
+                Layer.provideMerge(DatabaseTest),
+              ),
             ),
           ),
         ),

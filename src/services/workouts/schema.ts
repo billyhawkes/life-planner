@@ -130,7 +130,7 @@ export type WorkoutSearchInput = {
   readonly search?: string;
   readonly sort?: string;
   readonly page?: number;
-  /** Null selects all matching rows, for schedules and exports. */
+  /** Null selects all matching rows for schedules. */
   readonly pageSize?: number | null;
   readonly after?: string;
   /** Exclusive upper bound. */

@@ -32,6 +32,20 @@ const BrowserResponse = [
 
 export const WorkoutsApiGroup = HttpApiGroup.make("workouts")
   .add(
+    HttpApiEndpoint.delete("deleteWorkout", "/api/workouts/:id", {
+      params: WorkoutIdParams,
+      success: HttpApiSchema.Empty(204),
+      error: [HttpApiError.NotFound, HttpApiError.InternalServerError],
+    }).annotate(OpenApi.Summary, "Delete a workout"),
+  )
+  .add(
+    HttpApiEndpoint.post("delete", "/workouts/:id/delete", {
+      params: WorkoutIdParams,
+      payload: WorkoutFormFields.pipe(HttpApiSchema.asFormUrlEncoded()),
+      success: BrowserResponse,
+    }).annotate(OpenApi.Exclude, true),
+  )
+  .add(
     HttpApiEndpoint.get("listWorkouts", "/api/workouts", {
       query: WorkoutListQuery,
       success: Schema.Array(Workout),
@@ -80,14 +94,6 @@ export const WorkoutsApiGroup = HttpApiGroup.make("workouts")
     HttpApiEndpoint.get("page", "/workouts", {
       query: WorkoutViewQuery,
       success: BrowserResponse,
-    }).annotate(OpenApi.Exclude, true),
-  )
-  .add(
-    HttpApiEndpoint.get("exportCsv", "/workouts/export", {
-      query: WorkoutViewQuery,
-      success: Schema.String.pipe(
-        HttpApiSchema.asText({ contentType: "text/csv" }),
-      ),
     }).annotate(OpenApi.Exclude, true),
   )
   .add(

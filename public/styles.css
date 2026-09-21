@@ -1,11 +1,11 @@
 :root {
   /* Open Props 1.7.23 is vendored alongside this stylesheet (MIT). */
-  --surface: var(--gray-0);
-  --canvas: var(--stone-1);
+  --surface: #fff;
+  --canvas: #f7f8fa;
   --text: var(--stone-11);
   --muted: var(--stone-8);
-  --border: var(--stone-3);
-  --field-border: var(--stone-6);
+  --border: #e5e7eb;
+  --field-border: #cdd2d8;
   --accent: var(--green-10);
   --accent-hover: var(--green-11);
   --accent-soft: var(--green-0);
@@ -15,9 +15,9 @@
   --chart-color: var(--blue-8);
   --backdrop: color-mix(in srgb, var(--stone-12) 45%, transparent);
   --font-size-small: calc((var(--font-size-0) + var(--font-size-1)) / 2);
-  --control-size: calc(var(--size-7) + var(--size-2) + var(--size-1));
-  --control-radius: var(--radius-2);
-  --panel-radius: var(--radius-3);
+  --control-size: 40px;
+  --control-radius: 8px;
+  --panel-radius: 12px;
   --page-width: calc(var(--size-lg) + var(--size-13));
   --dialog-width: calc(var(--size-14) * 2);
   --motion-duration: 160ms;
@@ -63,6 +63,7 @@ button,
   color: var(--on-accent);
   text-decoration: none;
   cursor: pointer;
+  font-size: var(--font-size-small);
 }
 button:hover:not(:disabled),
 .button:hover {
@@ -122,6 +123,7 @@ select:focus-visible,
 textarea:focus-visible,
 a:focus-visible,
 button:focus-visible,
+summary:focus-visible,
 [tabindex]:focus-visible {
   outline: var(--border-size-2) solid var(--accent);
   outline-offset: var(--size-1);
@@ -133,8 +135,9 @@ main {
 }
 h1,
 h2 {
-  font-family: var(--font-transitional);
-  font-weight: var(--font-weight-4);
+  font-family: var(--font-system-ui);
+  font-weight: var(--font-weight-6);
+  letter-spacing: -0.025em;
   line-height: var(--font-lineheight-1);
   margin: 0;
 }
@@ -142,7 +145,7 @@ h1 {
   font-size: var(--font-size-fluid-3);
 }
 h2 {
-  font-size: var(--font-size-4);
+  font-size: var(--font-size-3);
 }
 h3 {
   font-size: var(--font-size-1);
@@ -178,15 +181,17 @@ footer {
   margin: var(--size-5) 0;
 }
 .tabs a {
-  padding: var(--size-3) var(--size-1);
-  border-bottom: var(--border-size-2) solid transparent;
+  padding: var(--size-2) var(--size-3);
+  border-radius: var(--control-radius);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-5);
   text-decoration: none;
   color: var(--muted);
   white-space: nowrap;
 }
 .tabs a.active {
-  border-bottom-color: var(--accent);
   color: var(--accent);
+  background: var(--accent-soft);
 }
 .tabs a:hover,
 .pills a:hover {
@@ -196,21 +201,82 @@ footer {
 .tabs a:focus-visible {
   outline-offset: calc(-1 * var(--size-1));
 }
+#dashboard {
+  padding-top: var(--size-5);
+}
+.planner-topbar {
+  gap: var(--size-5);
+  border-bottom: var(--border-size-1) solid var(--border);
+  padding-bottom: var(--size-5);
+  margin-bottom: var(--size-7);
+}
+.planner-topbar .tabs {
+  margin: 0;
+  border: 0;
+  gap: var(--size-1);
+}
+.planner-search {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  max-width: 320px;
+  margin-left: auto;
+}
+.planner-search input[type="search"] {
+  min-width: 0;
+  border-color: var(--border);
+  padding-left: var(--size-8);
+  background: var(--surface);
+  font-size: var(--font-size-small);
+}
+.search-button {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--control-size);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+}
+.search-button:hover:not(:disabled) {
+  background: transparent;
+  border-color: transparent;
+  color: var(--accent);
+}
+.planner-topbar > .create-menu {
+  margin-left: 0;
+}
+.planner-topbar .tabs {
+  margin-right: auto;
+}
+.daily-plans {
+  max-width: 900px;
+  margin-inline: auto;
+}
 .card {
   background: var(--surface);
   border: var(--border-size-1) solid var(--border);
   border-radius: var(--panel-radius);
   padding: var(--size-5);
   margin-bottom: var(--size-5);
-  box-shadow: var(--shadow-1);
+  box-shadow: 0 1px 2px rgb(20 30 40 / 3%);
 }
 .stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: var(--size-3);
 }
-.stats h2 {
-  font-size: var(--font-size-2);
+.stats h3 {
+  margin: 0;
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-5);
+  color: var(--muted);
+}
+.stats-section > h2 {
+  margin-bottom: var(--size-5);
 }
 .stats strong {
   display: block;
@@ -338,16 +404,16 @@ tbody tr:hover {
 }
 .badge {
   border-radius: var(--radius-round);
-  padding: var(--size-1) var(--size-2);
-  font-size: var(--font-size-0);
+  padding: 2px var(--size-2);
+  font-size: 11px;
+  white-space: nowrap;
   font-weight: var(--font-weight-5);
   color: var(--accent);
   text-transform: capitalize;
   background: var(--accent-soft);
 }
 .badge.planned {
-  background: var(--surface);
-  border: var(--border-size-1) solid var(--border);
+  background: var(--canvas);
   color: var(--muted);
 }
 .empty {
@@ -365,32 +431,55 @@ tbody tr:hover {
 }
 .calendar {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  min-width: var(--size-md);
-  margin-top: var(--size-3);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  min-width: 960px;
+  margin-top: var(--size-4);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--control-radius);
+  overflow: hidden;
 }
 .weekday {
   text-align: center;
-  padding: var(--size-2);
-  font-size: var(--font-size-small);
+  padding: var(--size-3);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: var(--canvas);
   font-weight: var(--font-weight-6);
   color: var(--muted);
 }
 .calendar-day {
   min-height: var(--size-11);
   padding: var(--size-2);
-  border: var(--border-size-1) solid var(--border);
+  background: var(--surface);
 }
-.calendar-day > div {
+.calendar-day-heading time {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-5);
+}
+.calendar-day-heading .current-day {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-radius: 50%;
+}
+.calendar-toolbar a {
+  font-size: var(--font-size-small);
+  text-decoration: none;
+  padding: var(--size-2);
+  border-radius: var(--control-radius);
+}
+.calendar-toolbar a:hover {
+  background: var(--canvas);
+}
+.calendar-day-heading {
   display: flex;
   justify-content: space-between;
-}
-.calendar-day article {
-  margin-top: var(--size-2);
-  padding: var(--size-2);
-  background: var(--accent-soft);
-  font-size: var(--font-size-0);
-  border-radius: var(--control-radius);
 }
 .calendar-day small {
   display: block;
@@ -399,6 +488,230 @@ tbody tr:hover {
 }
 .outside {
   background: var(--canvas);
+}
+
+.create-menu {
+  position: relative;
+  flex-shrink: 0;
+}
+.create-menu > .button {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2);
+}
+.icon {
+  display: block;
+  flex-shrink: 0;
+}
+.create-menu-items {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: max-content;
+  height: max-content;
+  max-width: calc(100vw - var(--size-4));
+  min-width: var(--size-12);
+  padding: var(--size-2);
+  background: var(--surface);
+  border: var(--border-size-1) solid var(--border);
+  border-radius: var(--control-radius);
+  box-shadow: var(--shadow-3);
+}
+.create-menu-items a {
+  display: flex;
+  align-items: center;
+  gap: var(--size-3);
+  padding: var(--size-2) var(--size-3);
+  border-radius: var(--control-radius);
+  text-decoration: none;
+  color: var(--text);
+  font-size: var(--font-size-small);
+}
+.create-menu-items a:hover {
+  background: var(--accent-soft);
+}
+.schedule-day {
+  margin-block: 0 var(--size-7);
+}
+.schedule-day-heading {
+  margin-bottom: var(--size-3);
+}
+.schedule-day-heading h3 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--size-3);
+  font-size: var(--font-size-small);
+}
+.day-date {
+  margin-left: var(--size-2);
+  color: var(--muted);
+  font-weight: var(--font-weight-4);
+}
+.today-label {
+  font-size: 11px;
+  font-weight: var(--font-weight-5);
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 2px var(--size-2);
+  border-radius: var(--radius-round);
+}
+.day-create-button {
+  display: grid;
+  place-items: center;
+  width: var(--size-7);
+  height: var(--size-7);
+  min-height: var(--size-7);
+  padding: 0;
+  font-size: var(--font-size-3);
+  line-height: 1;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+.calendar-day-heading {
+  align-items: center;
+}
+.log-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--size-1);
+  flex-shrink: 0;
+  max-width: 50%;
+}
+.log-card.compact .log-actions {
+  align-items: center;
+  flex-direction: row;
+  max-width: 100%;
+}
+.delete-button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+  font-size: var(--font-size-small);
+  padding: 0;
+}
+.delete-button:hover:not(:disabled) {
+  background: var(--danger-soft);
+  border-color: transparent;
+  color: var(--danger);
+}
+.day-cards {
+  display: grid;
+  gap: var(--size-2);
+}
+.log-card {
+  display: flex;
+  align-items: center;
+  gap: var(--size-3);
+  padding: var(--size-4) var(--size-5);
+  border: var(--border-size-1) solid var(--border);
+  border-radius: var(--panel-radius);
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgb(20 30 40 / 2%);
+}
+.log-card:hover {
+  border-color: var(--field-border);
+}
+.item-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 10px;
+}
+.workout-icon {
+  color: var(--blue-8);
+  background: var(--blue-0);
+}
+.habit-icon {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.log-content {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.log-kind {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+}
+.log-card h4 {
+  margin: 3px 0;
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-6);
+}
+.log-card p {
+  margin: 3px 0 0;
+  font-size: var(--font-size-0);
+  white-space: pre-wrap;
+}
+.log-card > a,
+.log-card > form {
+  flex-shrink: 0;
+}
+.log-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 3px var(--size-2);
+}
+.log-actions > a {
+  font-size: var(--font-size-0);
+  color: var(--muted);
+  text-decoration: none;
+  padding: var(--size-2);
+  border-radius: var(--control-radius);
+}
+.log-actions > a:hover {
+  background: var(--canvas);
+  color: var(--text);
+}
+.completion-button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  border-radius: 50%;
+  padding: 0;
+  color: var(--muted);
+}
+.completion-button[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+.day-empty {
+  margin: 0;
+  padding: var(--size-2) 0 var(--size-3);
+  font-size: var(--font-size-0);
+}
+.calendar-day .day-cards {
+  margin-top: var(--size-2);
+}
+.log-card.compact {
+  align-items: start;
+  flex-direction: column;
+  gap: var(--size-2);
+  padding: var(--size-2);
+  font-size: var(--font-size-0);
+  border-radius: 6px;
+  box-shadow: none;
+}
+.log-card.compact h4,
+.log-card.compact p,
+.log-card.compact button {
+  font-size: var(--font-size-0);
 }
 .sr-only {
   position: absolute;
@@ -492,6 +805,27 @@ html:has(dialog:modal) {
   }
 }
 @media (max-width: 768px) {
+  .planner-topbar .tabs {
+    flex: 1;
+    min-width: 0;
+  }
+  .planner-search {
+    order: 1;
+    flex-basis: 100%;
+    max-width: none;
+  }
+  .planner-topbar {
+    gap: var(--size-3);
+  }
+  .planner-topbar .tabs a {
+    padding-inline: var(--size-2);
+  }
+  .log-card:not(.compact) {
+    padding: var(--size-3);
+  }
+  .item-icon {
+    display: none;
+  }
   main {
     padding: var(--size-5) var(--size-3);
   }

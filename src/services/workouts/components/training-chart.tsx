@@ -30,7 +30,7 @@ export const TrainingChart = ({
     <section class="card">
       <header>
         <div>
-          <h2>Training trends</h2>
+          <h3>Training trends</h3>
           <p>
             Compare pace and distance across your latest completed runs and
             rides.
