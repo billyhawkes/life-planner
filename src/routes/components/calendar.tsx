@@ -19,7 +19,7 @@ export const PlannerCalendar = ({
   const next = new Date(month);
   next.setMonth(next.getMonth() + 1);
   return (
-    <section class="card calendar-panel">
+    <section class="calendar-panel">
       <header class="calendar-toolbar">
         <Link
           label="← Previous"

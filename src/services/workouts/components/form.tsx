@@ -17,6 +17,27 @@ export const WorkoutForm = ({
 }): Html => {
   const value = (name: string, fallback: string | number) =>
     values?.[name] ?? fallback;
+  const activity = String(
+    value("activityType", workout?.activityType ?? "Running"),
+  );
+  const activities = Array.from(
+    new Set([
+      "Running",
+      "Cycling",
+      "Walking",
+      "Swimming",
+      "Hiking",
+      "TraditionalStrengthTraining",
+      "FunctionalStrengthTraining",
+      "HighIntensityIntervalTraining",
+      "Yoga",
+      "Pilates",
+      "Rowing",
+      "Elliptical",
+      "Other",
+      ...(activity ? [activity] : []),
+    ]),
+  );
   const totalSeconds = Math.round((workout?.durationMinutes ?? 45) * 60);
   const action = workout
     ? `/workouts/${encodeURIComponent(workout.id).replaceAll("'", "%27")}`
@@ -30,7 +51,7 @@ export const WorkoutForm = ({
     <section id="workout-form">
       <dialog
         id="workout-dialog"
-        class="form-dialog"
+        class="form-dialog workout-dialog"
         open
         aria-labelledby="workout-form-title"
         aria-describedby="workout-form-description"
@@ -38,10 +59,12 @@ export const WorkoutForm = ({
         <header class="dialog-heading">
           <div>
             <h2 id="workout-form-title">
-              {workout ? "Edit workout" : "Add workout"}
+              {workout ? "Edit workout" : "Create workout"}
             </h2>
             <p id="workout-form-description">
-              Set the session timing and details for your training plan.
+              {workout
+                ? "Update your session details."
+                : "Plan a session or log a completed workout."}
             </p>
           </div>
           <a
@@ -62,118 +85,146 @@ export const WorkoutForm = ({
           {Object.entries(options).map(([key, entry]) => (
             <input type="hidden" name={key} value={entry} />
           ))}
-          <div class="form-grid">
-            <label>
-              Activity
-              <input
-                name="activityType"
-                autofocus
-                list="activities"
-                value={value(
-                  "activityType",
-                  workout?.activityType ?? "Running",
-                )}
-                required
-                maxlength="100"
-              />
-              <datalist id="activities">
-                <option>Running</option>
-                <option>Cycling</option>
-                <option>Walking</option>
-                <option>Swimming</option>
-              </datalist>
-            </label>
-            <label>
-              Status
-              <select name="status">
-                {["planned", "completed"].map((status) => (
-                  <option
-                    value={status}
-                    selected={
-                      value("status", workout?.status ?? "planned") === status
-                    }
-                  >
-                    {status === "planned" ? "Planned" : "Completed"}
+          <fieldset class="workout-section">
+            <legend>Session</legend>
+            <div class="form-grid">
+              <label>
+                Activity
+                <select name="activityType" autofocus required>
+                  <option value="" disabled selected={!activity}>
+                    Select an activity
                   </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Date
-              <input
-                type="datetime-local"
-                name="startDate"
-                value={value("startDate", localDateTime(date))}
-                required
-              />
-            </label>
-            <fieldset>
-              <legend>Duration</legend>
-              <div class="duration">
-                <label>
-                  Minutes
+                  {activities.map((entry) => (
+                    <option value={entry} selected={activity === entry}>
+                      {entry.replace(/([a-z])([A-Z])/g, "$1 $2")}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <fieldset class="choice-field">
+                <legend>Status</legend>
+                <div class="segmented-choice">
+                  {["planned", "completed"].map((status) => (
+                    <label>
+                      <input
+                        type="radio"
+                        name="status"
+                        value={status}
+                        checked={
+                          value("status", workout?.status ?? "planned") ===
+                          status
+                        }
+                      />
+                      <span>
+                        {status === "planned" ? "Planned" : "Completed"}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+              <label class="wide">
+                Date and time
+                <input
+                  type="datetime-local"
+                  name="startDate"
+                  value={value("startDate", localDateTime(date))}
+                  required
+                />
+              </label>
+            </div>
+          </fieldset>
+          <fieldset class="workout-section">
+            <legend>Workout details</legend>
+            <div class="form-grid">
+              <fieldset>
+                <legend>Duration</legend>
+                <div class="duration">
+                  <label class="unit-field">
+                    <span class="sr-only">Minutes</span>
+                    <input
+                      type="number"
+                      name="minutes"
+                      min="0"
+                      step="1"
+                      value={value("minutes", Math.floor(totalSeconds / 60))}
+                      required
+                    />
+                    <span class="field-unit" aria-hidden="true">
+                      min
+                    </span>
+                  </label>
+                  <label class="unit-field">
+                    <span class="sr-only">Seconds</span>
+                    <input
+                      type="number"
+                      name="seconds"
+                      min="0"
+                      max="59"
+                      step="1"
+                      value={value("seconds", totalSeconds % 60)}
+                      required
+                    />
+                    <span class="field-unit" aria-hidden="true">
+                      sec
+                    </span>
+                  </label>
+                </div>
+              </fieldset>
+              <label>
+                <span>
+                  Distance <span class="field-hint">optional</span>
+                </span>
+                <span class="unit-field">
                   <input
                     type="number"
-                    name="minutes"
+                    name="distance"
                     min="0"
-                    step="1"
-                    value={value("minutes", Math.floor(totalSeconds / 60))}
-                    required
+                    step="any"
+                    value={value("distance", workout?.distanceKilometres ?? "")}
+                    placeholder="0"
+                    aria-label="Distance in kilometres, optional"
                   />
-                </label>
-                <label>
-                  Seconds
-                  <input
-                    type="number"
-                    name="seconds"
-                    min="0"
-                    max="59"
-                    step="1"
-                    value={value("seconds", totalSeconds % 60)}
-                    required
-                  />
-                </label>
-              </div>
-            </fieldset>
-            <label>
-              Distance (km, optional)
-              <input
-                type="number"
-                name="distance"
-                min="0"
-                step="any"
-                value={value("distance", workout?.distanceKilometres ?? "")}
-              />
-            </label>
-            <label>
-              Location
-              <select name="indoor">
-                <option
-                  value="false"
-                  selected={
-                    value("indoor", String(workout?.indoor ?? false)) ===
-                    "false"
-                  }
+                  <span class="field-unit" aria-hidden="true">
+                    km
+                  </span>
+                </span>
+              </label>
+              <fieldset class="choice-field wide location-choice">
+                <legend>Location</legend>
+                <div class="segmented-choice">
+                  {[
+                    { value: "false", label: "Outdoors" },
+                    { value: "true", label: "Indoors" },
+                  ].map((location) => (
+                    <label>
+                      <input
+                        type="radio"
+                        name="indoor"
+                        value={location.value}
+                        checked={
+                          value("indoor", String(workout?.indoor ?? false)) ===
+                          location.value
+                        }
+                      />
+                      <span>{location.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+              <label class="wide">
+                <span>
+                  Notes <span class="field-hint">optional</span>
+                </span>
+                <textarea
+                  name="notes"
+                  rows="2"
+                  placeholder="Route, intervals, or anything to remember…"
                 >
-                  Outdoors
-                </option>
-                <option
-                  value="true"
-                  selected={
-                    value("indoor", String(workout?.indoor ?? false)) === "true"
-                  }
-                >
-                  Indoors
-                </option>
-              </select>
-            </label>
-            <label class="wide">
-              Plan notes
-              <textarea name="notes" rows="3">
-                {value("notes", workout?.notes ?? "")}
-              </textarea>
-            </label>
-          </div>
+                  {value("notes", workout?.notes ?? "")}
+                </textarea>
+              </label>
+            </div>
+          </fieldset>
           {error ? (
             <p role="alert" class="error" tabindex="-1">
               {error}
