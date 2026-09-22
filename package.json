@@ -10,7 +10,6 @@
     "build": "bun build src/server.ts --target=bun --outdir=dist",
     "start": "bun src/server.ts",
     "preview": "bun dist/server.js",
-    "health:import": "bun scripts/import-health.ts",
     "db:migrate": "bun scripts/migrate.ts",
     "type:check": "tsc --noEmit",
     "lint": "oxlint",

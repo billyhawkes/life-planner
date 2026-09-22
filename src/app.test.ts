@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
-import { BunHttpServer } from "@effect/platform-bun";
-import { Effect, Layer } from "effect";
+import { BunHttpServer, BunServices } from "@effect/platform-bun";
+import { Effect, FileSystem, Layer } from "effect";
+import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 import { HttpRouter } from "effect/unstable/http";
 import { SqlClient } from "effect/unstable/sql";
 
@@ -43,6 +44,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
                   ),
                 ),
                 Layer.provide(BunHttpServer.layerHttpServices),
+                Layer.provideMerge(BunServices.layer),
               ),
               { disableLogger: true },
             );
@@ -362,6 +364,85 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
             expect(nativeDeleted.headers.get("location")).toContain(
               "view=today",
             );
+
+            const importPage = yield* request("/workouts?import=true");
+            expect(yield* Effect.promise(() => importPage.text())).toContain(
+              'enctype="multipart/form-data"',
+            );
+            const fs = yield* FileSystem.FileSystem;
+            const directory = yield* fs.makeTempDirectoryScoped();
+            yield* fs.makeDirectory(`${directory}/apple_health_export`);
+            const xmlPath = `${directory}/apple_health_export/export.xml`;
+            yield* fs.writeFileString(
+              xmlPath,
+              `<HealthData><Workout workoutActivityType="HKWorkoutActivityType${activityType}" startDate="2026-09-22 09:00:00 +0000" endDate="2026-09-22 09:30:00 +0000" duration="30" sourceName="Import test"/></HealthData>`,
+            );
+            const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
+            const zip = yield* spawner.spawn(
+              ChildProcess.make(
+                "zip",
+                ["-q", "export.zip", "apple_health_export/export.xml"],
+                { cwd: directory },
+              ),
+            );
+            expect(yield* zip.exitCode).toBe(ChildProcessSpawner.ExitCode(0));
+            const bytes = yield* fs.readFile(`${directory}/export.zip`);
+            const upload = () => {
+              const body = new FormData();
+              body.set(
+                "archive",
+                new Blob([new Uint8Array(bytes)]),
+                "export.zip",
+              );
+              return body;
+            };
+            const imported = yield* request("/workouts/import?view=stats", {
+              method: "POST",
+              body: upload(),
+            });
+            expect(imported.status).toBe(303);
+            expect(imported.headers.get("location")).toContain("imported=1");
+            expect((yield* workouts.list({ activityType })).length).toBe(1);
+            const reimported = yield* request("/workouts/import?view=stats", {
+              method: "POST",
+              body: upload(),
+              headers: { "Datastar-Request": "true" },
+            });
+            expect(reimported.headers.get("content-type")).toContain(
+              "text/event-stream",
+            );
+            const importResult = yield* Effect.promise(() => reimported.text());
+            expect(importResult).toContain("Import complete");
+            expect(importResult).toContain("Workouts imported");
+            expect(importResult).toContain("Activity types");
+            expect(importResult).toContain("0.5 hours");
+            expect(importResult).toContain("0 km");
+            expect(importResult).toContain("<dd>1</dd>");
+            expect(importResult).toContain("<dt>Plans replaced</dt><dd>0</dd>");
+            expect(importResult).not.toContain('type="file"');
+            const nativeImportResult = yield* request(
+              imported.headers.get("location")!,
+            );
+            expect(
+              yield* Effect.promise(() => nativeImportResult.text()),
+            ).toContain("Import complete");
+            expect((yield* workouts.list({ activityType })).length).toBe(1);
+            const invalidZip = new FormData();
+            invalidZip.set("archive", new Blob(["not a zip"]), "export.zip");
+            const rejected = yield* request("/workouts/import", {
+              method: "POST",
+              body: invalidZip,
+            });
+            expect(rejected.status).toBe(400);
+            expect(yield* Effect.promise(() => rejected.text())).toContain(
+              "Choose a valid export ZIP",
+            );
+            const missing = yield* request("/workouts/import", {
+              method: "POST",
+              body: new FormData(),
+            });
+            expect(missing.status).toBe(400);
+            expect((yield* workouts.list({ activityType })).length).toBe(1);
           }).pipe(
             Effect.scoped,
             Effect.provide(
@@ -369,6 +450,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
                 Layer.provideMerge(DatabaseTest),
               ),
             ),
+            Effect.provide(BunServices.layer),
           ),
         ),
       15000,

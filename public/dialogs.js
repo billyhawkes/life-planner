@@ -54,7 +54,11 @@ document.addEventListener("click", (event) => {
   const link = event.target.closest("a[href]");
   if (link && !activeDialog) {
     const url = new URL(link.href);
-    if (url.searchParams.has("new") || url.searchParams.has("edit")) {
+    if (
+      url.searchParams.has("new") ||
+      url.searchParams.has("edit") ||
+      url.searchParams.has("import")
+    ) {
       opener =
         link.closest(".create-menu")?.querySelector("[popovertarget]") ?? link;
       link.closest(".create-menu-items:popover-open")?.hidePopover();

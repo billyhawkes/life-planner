@@ -10,6 +10,7 @@ export const renderDocument = (body: Html) =>
           <link rel="stylesheet" href="/open-props-1.7.23.min.css" />
           <link rel="stylesheet" href="/styles.css" />
           <script type="module" src="/dialogs.js" />
+          <script type="module" src="/charts.js" />
           <script type="module" src="/datastar.js" />
         </head>
         <body>{body}</body>

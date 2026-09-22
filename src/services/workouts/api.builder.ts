@@ -1,4 +1,4 @@
-import { Effect } from "effect";
+import { Effect, Option, Schema } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
 import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi";
 
@@ -11,8 +11,11 @@ import { renderDocument } from "@/routes/document";
 import { renderLoadError } from "@/routes/error";
 import { PlannerFeedback } from "@/routes/components/feedback";
 import { Workouts } from "./index";
-import { decodeWorkoutForm } from "./schema";
+import { decodeWorkoutForm, HealthImportStats } from "./schema";
 import { WorkoutForm } from "./components/form";
+import { HealthImportForm } from "./components/import-form";
+import { readHealthArchive } from "./health-import";
+import type { HealthImportPayload } from "./schema";
 import { readOptions, viewUrl } from "./helpers";
 
 const page = (query: Record<string, string>) =>
@@ -25,18 +28,23 @@ const page = (query: Record<string, string>) =>
     if (edit && !workout)
       return HttpServerResponse.text("Workout not found", { status: 404 });
     const initialDate = query.new ?? "";
+    const stats = Option.getOrUndefined(
+      Schema.decodeUnknownOption(HealthImportStats)(query),
+    );
     const form =
-      workout || initialDate
-        ? WorkoutForm({
-            options,
-            workout,
-            initialDate:
-              /^\d{4}-\d{2}-\d{2}$/.test(initialDate) &&
-              Number.isFinite(Date.parse(initialDate))
-                ? initialDate
-                : undefined,
-          })
-        : undefined;
+      query.import === "true" || stats !== undefined
+        ? HealthImportForm({ options, stats })
+        : workout || initialDate
+          ? WorkoutForm({
+              options,
+              workout,
+              initialDate:
+                /^\d{4}-\d{2}-\d{2}$/.test(initialDate) &&
+                Number.isFinite(Date.parse(initialDate))
+                  ? initialDate
+                  : undefined,
+            })
+          : undefined;
     if (isDatastar(request) && form) return sse([patchElements(form)]);
     const data = yield* loadDashboard(options);
     return HttpServerResponse.html(
@@ -109,6 +117,89 @@ const save = (values: Record<string, string>, id?: string) =>
   );
 
 const internalServerError = () => new HttpApiError.InternalServerError({});
+
+const importHealth = Effect.fn("Workouts.importHealth")(
+  function* (
+    payload: typeof HealthImportPayload.Type,
+    query: Record<string, string>,
+  ) {
+    const request = yield* HttpServerRequest.HttpServerRequest;
+    const options = readOptions(query);
+    const feedback = Effect.fn("Workouts.importFeedback")(function* (
+      message: string,
+      status: number,
+    ) {
+      const form = HealthImportForm({ options, error: message });
+      if (isDatastar(request)) return sse([patchElements(form)]);
+      return HttpServerResponse.text(
+        renderDocument(
+          renderDashboard(yield* loadDashboard(options), options, form),
+        ).value,
+        { status, contentType: "text/html" },
+      );
+    });
+    if (
+      !payload.archive ||
+      !payload.archive.name.toLowerCase().endsWith(".zip")
+    )
+      return yield* feedback("Choose an Apple Health ZIP file.", 400);
+    const parsed = yield* readHealthArchive(payload.archive).pipe(
+      Effect.result,
+    );
+    if (parsed._tag === "Failure") {
+      yield* Effect.logError(parsed.failure);
+      return yield* feedback(parsed.failure.message, 400);
+    }
+    const service = yield* Workouts;
+    const imported = yield* service.import(parsed.success).pipe(Effect.result);
+    if (imported._tag === "Failure") {
+      yield* Effect.logError(imported.failure);
+      return yield* feedback(
+        "The workouts could not be imported. Please try again.",
+        500,
+      );
+    }
+    const stats = {
+      ...imported.success,
+      durationMinutes: parsed.success.reduce(
+        (sum, workout) => sum + workout.durationMinutes,
+        0,
+      ),
+      distanceKilometres: parsed.success.reduce(
+        (sum, workout) => sum + (workout.distanceKilometres ?? 0),
+        0,
+      ),
+      activityTypes: new Set(
+        parsed.success.map((workout) => workout.activityType),
+      ).size,
+    };
+    const resultQuery = new URLSearchParams(
+      Object.entries(stats).map(([key, value]) => [key, String(value)]),
+    );
+    if (!isDatastar(request))
+      return HttpServerResponse.redirect(`${viewUrl(options)}&${resultQuery}`, {
+        status: 303,
+      });
+    return sse([
+      patchElements(
+        renderDashboard(
+          yield* loadDashboard(options),
+          options,
+          HealthImportForm({ options, stats }),
+        ),
+      ),
+    ]);
+  },
+  Effect.catch((error) =>
+    Effect.logError(error).pipe(
+      Effect.as(
+        HttpServerResponse.text("The import could not be completed.", {
+          status: 500,
+        }),
+      ),
+    ),
+  ),
+);
 
 const remove = (id: string, values: Record<string, string>) =>
   Effect.gen(function* () {
@@ -196,6 +287,7 @@ export const workoutsHandler = HttpApiBuilder.group(
         ),
       )
       .handle("page", ({ query }) => page(query))
+      .handle("import", ({ payload, query }) => importHealth(payload, query))
       .handle("create", ({ payload }) => save(payload))
       .handle("update", ({ params, payload }) => save(payload, params.id)),
 );

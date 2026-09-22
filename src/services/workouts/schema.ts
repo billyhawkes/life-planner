@@ -1,4 +1,21 @@
 import { Schema } from "effect";
+import { Multipart } from "effect/unstable/http";
+
+export const HealthImportPayload = Schema.Struct({
+  archive: Schema.optional(Multipart.SingleFileSchema),
+}).annotate({ identifier: "HealthImportPayload" });
+
+const ImportStat = Schema.NumberFromString.check(
+  Schema.isFinite(),
+  Schema.isGreaterThanOrEqualTo(0),
+);
+export const HealthImportStats = Schema.Struct({
+  imported: ImportStat,
+  plansReplaced: ImportStat,
+  durationMinutes: ImportStat,
+  distanceKilometres: ImportStat,
+  activityTypes: ImportStat,
+}).annotate({ identifier: "HealthImportStats" });
 
 export const HeartRate = Schema.Struct({
   average: Schema.Number,

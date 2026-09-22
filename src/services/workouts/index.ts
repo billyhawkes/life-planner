@@ -325,7 +325,7 @@ export class Workouts extends Context.Service<Workouts>()("Workouts", {
         sql
           .withTransaction(
             Effect.gen(function* () {
-              if (!items.length) return 0;
+              if (!items.length) return { imported: 0, plansReplaced: 0 };
               // Serialize imports so concurrent re-imports cannot consume the same planned session.
               yield* sql`LOCK TABLE workouts IN SHARE ROW EXCLUSIVE MODE`;
               const existing = yield* sql<{
@@ -375,7 +375,7 @@ export class Workouts extends Context.Service<Workouts>()("Workouts", {
           heart_rate_maximum = coalesce(excluded.heart_rate_maximum, workouts.heart_rate_maximum)`;
                 existingIds.add(workout.id);
               }
-              return items.length;
+              return { imported: items.length, plansReplaced: used.size };
             }),
           )
           .pipe(Effect.mapError(databaseError("Could not import workouts"))),

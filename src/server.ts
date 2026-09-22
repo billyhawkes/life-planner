@@ -8,7 +8,13 @@ const ServerLive = Layer.unwrap(
     Config.withDefault(3000),
     Effect.map((port) =>
       HttpRouter.serve(AppLive).pipe(
-        Layer.provide(BunHttpServer.layer({ port })),
+        Layer.provide(
+          BunHttpServer.layer({
+            port,
+            maxRequestBodySize: 2 * 1024 ** 3 + 1024 ** 2,
+            idleTimeout: 0,
+          }),
+        ),
       ),
     ),
   ),

@@ -16,6 +16,7 @@ import {
   WorkoutSummaryQuery,
   WorkoutFormFields,
   WorkoutViewQuery,
+  HealthImportPayload,
 } from "./schema";
 
 const HtmlResponse = Schema.String.pipe(
@@ -85,6 +86,15 @@ export const WorkoutsApiGroup = HttpApiGroup.make("workouts")
       ),
   )
   // Browser endpoints share this group but are omitted from JSON API/MCP docs.
+  .add(
+    HttpApiEndpoint.post("import", "/workouts/import", {
+      query: WorkoutViewQuery,
+      payload: HealthImportPayload.pipe(
+        HttpApiSchema.asMultipart({ maxFileSize: 2 * 1024 ** 3 }),
+      ),
+      success: BrowserResponse,
+    }).annotate(OpenApi.Exclude, true),
+  )
   .add(
     HttpApiEndpoint.get("home", "/", {
       success: HttpApiSchema.Empty(303),

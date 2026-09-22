@@ -9,6 +9,7 @@ import { HabitCard } from "@/services/habits/components/card";
 import { Link } from "@/services/workouts/components/links";
 import { WorkoutCard } from "@/services/workouts/components/card";
 import { TrainingChart } from "@/services/workouts/components/training-chart";
+import { ImportMenu } from "@/services/workouts/components/import-menu";
 import {
   formatNumber,
   formatPace,
@@ -106,6 +107,7 @@ export const renderDashboard = (
             </button>
           </form>
         ) : null}
+        <ImportMenu options={options} />
       </header>
       {form}
       {habitForm}

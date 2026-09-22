@@ -14,6 +14,7 @@ import styles from "../public/styles.css" with { type: "text" };
 import datastar from "../public/datastar.js" with { type: "text" };
 import openProps from "../public/open-props-1.7.23.min.css" with { type: "text" };
 import dialogs from "../public/dialogs.js" with { type: "text" };
+import charts from "../public/charts.js" with { type: "text" };
 
 const ready = Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;
@@ -55,6 +56,11 @@ export const applicationRoutes = Layer.mergeAll(
     HttpServerResponse.text(dialogs, { contentType: "text/javascript" }),
   ),
   HttpRouter.add("GET", "/api/health", ready),
+  HttpRouter.add(
+    "GET",
+    "/charts.js",
+    HttpServerResponse.text(charts, { contentType: "text/javascript" }),
+  ),
   HttpRouter.add("GET", "/api/health/ready", ready),
   HttpRouter.add(
     "GET",

@@ -148,7 +148,10 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
               heartRate: { average: 140, minimum: 110, maximum: 170 },
             };
             ids.push(imported.id);
-            expect(yield* service.import([imported])).toBe(1);
+            expect(yield* service.import([imported])).toEqual({
+              imported: 1,
+              plansReplaced: 1,
+            });
             expect(
               (yield* service.overview({ activityType })).trends.map(
                 (row) => row.id,
@@ -162,13 +165,15 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
                 heartRate: { average: 140 },
               },
             ]);
-            yield* service.import([
-              {
-                ...imported,
-                distanceKilometres: undefined,
-                heartRate: undefined,
-              },
-            ]);
+            expect(
+              yield* service.import([
+                {
+                  ...imported,
+                  distanceKilometres: undefined,
+                  heartRate: undefined,
+                },
+              ]),
+            ).toEqual({ imported: 1, plansReplaced: 0 });
             const rows = yield* service.list({ activityType });
             expect(rows).toHaveLength(1);
             expect(rows[0]).toMatchObject({

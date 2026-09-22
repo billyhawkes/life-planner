@@ -53,18 +53,15 @@ server is required. `bun start` runs the source without watch mode.
 
 ## Import Apple Health
 
-Place your Apple Health archive at `export.zip`, then run:
-
-```sh
-bun run health:import
-# Or supply an archive path:
-bun run health:import /path/to/export.zip
-```
+Click **Import Apple Health** on the dashboard, choose your exported ZIP (up to
+2 GB), and click **Import workouts**. The browser uploads to `POST /workouts/import`
+and displays the imported workout count. Large exports may take a few minutes.
 
 The importer streams `apple_health_export/export.xml` through `unzip`, extracts
 individual workout elements, and parses them with `Bun.XML.parse`. It stores
 only workout summaries, without loading the complete export into memory.
-Clinical records and workout routes are not imported or uploaded.
+The ZIP is uploaded to the local server and temporarily stored during processing,
+then removed automatically. Clinical records and workout routes are not imported.
 
 Imports are transactional and idempotent. Stable workout identities are upserted.
 New imports match the nearest planned session of the same activity within 12
@@ -106,7 +103,7 @@ than modifying a migration that has already run.
 - `public/styles.css` — application styles
 - `src/services/workouts/` — workout service and typed JSON API
 - `src/db/` — PostgreSQL layers and migrations
-- `scripts/` — migrations and Apple Health importer
+- `scripts/` — migration utility
 - `public/datastar.js` — Datastar 1.0.2, vendored from the template's `datastar-effect` branch
 
 ## Checks

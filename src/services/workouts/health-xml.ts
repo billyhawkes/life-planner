@@ -1,5 +1,5 @@
 import { Effect, Schema } from "effect";
-import { WorkoutDataError, type Workout } from "@/services/workouts/schema";
+import { WorkoutDataError, type Workout } from "./schema";
 
 const Attribute = Schema.Record(Schema.String, Schema.String).annotate({
   identifier: "HealthXmlAttributes",
@@ -46,8 +46,17 @@ export const parseWorkout = (xml: string) =>
       /^HKWorkoutActivityType/,
       "",
     );
-    const startDate = appleDateToIso(entry["@startDate"]);
-    const endDate = appleDateToIso(entry["@endDate"]);
+    const [startDate, endDate] = yield* Effect.try({
+      try: () => [
+        appleDateToIso(entry["@startDate"]),
+        appleDateToIso(entry["@endDate"]),
+      ],
+      catch: (cause) =>
+        new WorkoutDataError({
+          message: "Invalid workout date in Apple Health export",
+          cause,
+        }),
+    });
     const sourceName = entry["@sourceName"];
     let distanceKilometres: number | undefined;
     let activeEnergyKilocalories: number | undefined;

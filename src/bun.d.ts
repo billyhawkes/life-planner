@@ -17,3 +17,7 @@ declare module "*dialogs.js" {
   const content: string;
   export default content;
 }
+declare module "*charts.js" {
+  const content: string;
+  export default content;
+}
