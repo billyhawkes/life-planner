@@ -106,7 +106,6 @@ export const renderDashboard = (
             </button>
           </form>
         ) : null}
-        <CreateMenu options={options} />
       </header>
       {form}
       {habitForm}

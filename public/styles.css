@@ -575,7 +575,7 @@ tbody tr:hover {
 }
 .log-card.compact .log-actions {
   align-items: center;
-  flex-direction: row;
+  flex-direction: column;
   max-width: 100%;
 }
 .delete-button {
@@ -693,10 +693,10 @@ tbody tr:hover {
   margin-top: var(--size-2);
 }
 .log-card.compact {
-  align-items: start;
-  flex-direction: column;
-  gap: var(--size-2);
-  padding: var(--size-2);
+  align-items: center;
+  flex-direction: row;
+  gap: var(--size-1);
+  padding: var(--size-1) var(--size-2);
   font-size: var(--font-size-0);
   border-radius: 6px;
   box-shadow: none;
@@ -705,6 +705,18 @@ tbody tr:hover {
 .log-card.compact p,
 .log-card.compact button {
   font-size: var(--font-size-0);
+}
+.log-card.compact h4 {
+  margin: 1px 0;
+}
+.log-card.compact .completion-button,
+.log-card.compact .delete-button {
+  width: 24px;
+  height: 24px;
+  min-height: 24px;
+}
+.log-card.compact .log-actions > a {
+  padding: var(--size-1);
 }
 .sr-only {
   position: absolute;

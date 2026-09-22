@@ -27,9 +27,6 @@ export const HabitCard = ({
         <span class="log-kind">Habit · Daily</span>
         <div class="log-title">
           <h4>{habit.name}</h4>
-          <span class={`badge ${completed ? "completed" : "planned"}`}>
-            {completed ? "Completed" : "To do"}
-          </span>
         </div>
         {!compact && habit.notes ? <p>{habit.notes}</p> : null}
       </div>
