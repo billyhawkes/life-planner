@@ -21,7 +21,7 @@ const AddWorkout = () => (
 
 ## Quick start
 
-Requires Bun **1.4.0 or newer** (for `Bun.XML`), PostgreSQL, and `unzip` for imports.
+Requires Bun **1.4.0 or newer** (for `Bun.XML`) and PostgreSQL.
 
 ```sh
 bun install
@@ -57,7 +57,7 @@ Click **Import Apple Health** on the dashboard, choose your exported ZIP (up to
 2 GB), and click **Import workouts**. The browser uploads to `POST /workouts/import`
 and displays the imported workout count. Large exports may take a few minutes.
 
-The importer streams `apple_health_export/export.xml` through `unzip`, extracts
+The importer streams `apple_health_export/export.xml` through `@zip.js/zip.js`, extracts
 individual workout elements, and parses them with `Bun.XML.parse`. It stores
 only workout summaries, without loading the complete export into memory.
 The ZIP is uploaded to the local server and temporarily stored during processing,

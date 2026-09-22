@@ -5,7 +5,7 @@ import { migrate } from "@/db/migrations";
 
 const databaseLayer = (variable: string) => {
   const client = Layer.unwrap(
-    Config.redacted(variable).pipe(
+    Config.Redacted(variable).pipe(
       Effect.map((url) => PgClient.layer({ url })),
     ),
   );

@@ -4,7 +4,7 @@ import { HttpRouter } from "effect/unstable/http";
 import { AppLive } from "@/app";
 
 const ServerLive = Layer.unwrap(
-  Config.port("PORT").pipe(
+  Config.Port("PORT").pipe(
     Config.withDefault(3000),
     Effect.map((port) =>
       HttpRouter.serve(AppLive).pipe(

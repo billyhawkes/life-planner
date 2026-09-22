@@ -316,9 +316,9 @@ export class HttpApiSpec extends Context.Service<HttpApiSpec>()("HttpApiSpec", {
               operationJsonSchema(operation),
             );
 
-            return SchemaRepresentation.toSchema(
-              SchemaRepresentation.fromJsonSchemaDocument(document),
-            );
+            return SchemaRepresentation.fromJsonSchemaDocument(document, {
+              patterns: "apply",
+            });
           },
         };
       },

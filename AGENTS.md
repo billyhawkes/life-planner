@@ -83,7 +83,7 @@ Service methods should accept object inputs, scope by the current user or tenant
 
 ## Tooling
 
-- Keep runtime dependencies limited to Bun, Effect, and the Effect PostgreSQL adapter.
+- Keep runtime dependencies limited to Bun, Effect, the Effect PostgreSQL adapter, and zip.js for streaming ZIP imports.
 - Datastar is vendored in `public/datastar.js`; do not edit the minified runtime by hand.
 - The application is a local single-user tool with no authentication layer.
 

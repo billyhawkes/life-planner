@@ -58,7 +58,7 @@ export const decodeCompletionForm = (values: Record<string, string>) =>
           : undefined,
   });
 
-export class HabitDataError extends Schema.TaggedErrorClass<HabitDataError>()(
+export class HabitDataError extends Schema.TaggedError<HabitDataError>()(
   "HabitDataError",
   { message: Schema.String, cause: Schema.optional(Schema.Defect()) },
 ) {}

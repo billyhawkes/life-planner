@@ -134,7 +134,7 @@ export const decodeWorkoutForm = (values: Record<string, string>) => {
   });
 };
 
-export class WorkoutDataError extends Schema.TaggedErrorClass<WorkoutDataError>()(
+export class WorkoutDataError extends Schema.TaggedError<WorkoutDataError>()(
   "WorkoutDataError",
   { message: Schema.String, cause: Schema.optional(Schema.Defect()) },
 ) {}

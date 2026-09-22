@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { BunHttpServer, BunServices } from "@effect/platform-bun";
-import { Effect, FileSystem, Layer } from "effect";
-import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
+import { Effect, Layer } from "effect";
+import { BlobWriter, TextReader, ZipWriter } from "@zip.js/zip.js";
 import { HttpRouter } from "effect/unstable/http";
 import { SqlClient } from "effect/unstable/sql";
 
@@ -369,31 +369,21 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
             expect(yield* Effect.promise(() => importPage.text())).toContain(
               'enctype="multipart/form-data"',
             );
-            const fs = yield* FileSystem.FileSystem;
-            const directory = yield* fs.makeTempDirectoryScoped();
-            yield* fs.makeDirectory(`${directory}/apple_health_export`);
-            const xmlPath = `${directory}/apple_health_export/export.xml`;
-            yield* fs.writeFileString(
-              xmlPath,
-              `<HealthData><Workout workoutActivityType="HKWorkoutActivityType${activityType}" startDate="2026-09-22 09:00:00 +0000" endDate="2026-09-22 09:30:00 +0000" duration="30" sourceName="Import test"/></HealthData>`,
-            );
-            const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
-            const zip = yield* spawner.spawn(
-              ChildProcess.make(
-                "zip",
-                ["-q", "export.zip", "apple_health_export/export.xml"],
-                { cwd: directory },
-              ),
-            );
-            expect(yield* zip.exitCode).toBe(ChildProcessSpawner.ExitCode(0));
-            const bytes = yield* fs.readFile(`${directory}/export.zip`);
+            const archive = yield* Effect.promise(async () => {
+              const writer = new ZipWriter(new BlobWriter(), {
+                useWebWorkers: false,
+              });
+              await writer.add(
+                "apple_health_export/export.xml",
+                new TextReader(
+                  `<HealthData><Workout workoutActivityType="HKWorkoutActivityType${activityType}" startDate="2026-09-22 09:00:00 +0000" endDate="2026-09-22 09:30:00 +0000" duration="30" sourceName="Import test"/></HealthData>`,
+                ),
+              );
+              return writer.close();
+            });
             const upload = () => {
               const body = new FormData();
-              body.set(
-                "archive",
-                new Blob([new Uint8Array(bytes)]),
-                "export.zip",
-              );
+              body.set("archive", archive, "export.zip");
               return body;
             };
             const imported = yield* request("/workouts/import?view=stats", {

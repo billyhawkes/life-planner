@@ -1,5 +1,5 @@
 import { Context, Effect, Layer, Option, Schema } from "effect";
-import { McpSchema, McpServer } from "effect/unstable/ai";
+import { McpProtocol, McpSchema, McpServer } from "effect/unstable/ai";
 
 import { ApiClient, type ApiClientService } from "@/lib/httpapi-client";
 import {
@@ -158,6 +158,12 @@ export const httpApiMcpServerLayer = (
         name: spec.info.title,
         version: spec.info.version,
         path,
+        protocols: [
+          McpProtocol.v2025_11_25,
+          McpProtocol.v2025_06_18,
+          McpProtocol.v2025_03_26,
+          McpProtocol.v2024_11_05,
+        ],
       });
     }),
   );
