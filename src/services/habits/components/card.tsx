@@ -1,6 +1,6 @@
 import type { HabitOccurrence } from "../schema";
 import type { ViewOptions } from "@/services/workouts/helpers";
-import { DeleteButton } from "@/routes/components/delete-button";
+import { viewUrl } from "@/services/workouts/helpers";
 import { Icon } from "@/routes/components/icon";
 
 export const HabitCard = ({
@@ -14,50 +14,63 @@ export const HabitCard = ({
 }) => {
   const { habit, date, completed } = occurrence;
   const action = `/habits/${encodeURIComponent(habit.id).replaceAll("'", "%27")}/completion`;
+  const deleteAction = `/habits/${encodeURIComponent(habit.id).replaceAll("'", "%27")}/delete`;
+  const editUrl = `${viewUrl(options).replace("/workouts?", "/habits/new?")}&edit=${encodeURIComponent(habit.id).replaceAll("'", "%27")}`;
+  const menuId = `habit-menu-${habit.id}-${date}`;
   return (
     <article
-      class={`log-card ${compact ? "compact" : ""} ${completed ? "is-complete" : ""}`}
+      class={`habit-control ${compact ? "compact" : ""} ${completed ? "is-complete" : ""}`}
+      data-context-menu={menuId}
     >
-      {!compact ? (
-        <span class="item-icon habit-icon">
-          <Icon name="habit" />
-        </span>
-      ) : null}
-      <div class="log-content">
-        <span class="log-kind">Habit · Daily</span>
-        <div class="log-title">
-          <h4>{habit.name}</h4>
-        </div>
-        {!compact && habit.notes ? <p>{habit.notes}</p> : null}
-      </div>
-      <div class="log-actions">
+      <form
+        method="post"
+        action={action}
+        data-on:submit__prevent={`@post('${action}', {contentType: 'form'})`}
+      >
+        {Object.entries(options).map(([key, value]) => (
+          <input type="hidden" name={key} value={value} />
+        ))}
+        <input type="hidden" name="date" value={date} />
+        <input type="hidden" name="completed" value={String(!completed)} />
+        <button
+          class="habit-toggle secondary"
+          type="submit"
+          aria-label={`${completed ? "Mark incomplete" : "Complete"}: ${habit.name} on ${date}`}
+          aria-pressed={String(completed)}
+          title={`${completed ? "Mark incomplete" : "Complete"}. Right-click for habit actions.`}
+        >
+          <span class="habit-symbol" aria-hidden="true">
+            <Icon name={habit.icon} />
+          </span>
+          <span class="habit-name">{habit.name}</span>
+        </button>
+      </form>
+      <nav
+        id={menuId}
+        popover="auto"
+        class="create-menu-items habit-context-menu"
+        aria-label={`Actions for ${habit.name}`}
+      >
+        <a href={editUrl} data-on:click__prevent={`@get('${editUrl}')`}>
+          <Icon name="edit" /> Edit
+        </a>
         <form
           method="post"
-          action={action}
-          data-on:submit__prevent={`@post('${action}', {contentType: 'form'})`}
+          action={deleteAction}
+          data-on:submit__prevent={`@post('${deleteAction}', {contentType: 'form'})`}
         >
           {Object.entries(options).map(([key, value]) => (
             <input type="hidden" name={key} value={value} />
           ))}
-          <input type="hidden" name="date" value={date} />
-          <input type="hidden" name="completed" value={String(!completed)} />
           <button
-            class="completion-button secondary"
             type="submit"
-            aria-label={`${completed ? "Mark incomplete" : "Complete"}: ${habit.name} on ${date}`}
-            aria-pressed={String(completed)}
-            title={completed ? "Mark incomplete" : "Complete habit"}
+            aria-label={`Delete habit: ${habit.name}`}
+            title="Delete this habit and all its completion history"
           >
-            <Icon name="check" />
+            <Icon name="trash" /> Delete
           </button>
         </form>
-        <DeleteButton
-          kind="habit"
-          id={habit.id}
-          name={habit.name}
-          options={options}
-        />
-      </div>
+      </nav>
     </article>
   );
 };

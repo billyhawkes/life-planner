@@ -13,6 +13,7 @@ describe("habit form validation", () => {
       ),
     ).toEqual({
       name: "Read",
+      icon: "circle-check",
       startDate: "2028-02-29",
       notes: "",
     });
@@ -62,13 +63,19 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
             const first = yield* habits.create({
               payload: {
                 name: "Read",
+                icon: "book-open",
                 startDate: "2026-03-08",
                 notes: "Ten pages",
               },
             });
             ids.push(first.id);
             const second = yield* habits.create({
-              payload: { name: "Walk", startDate: "2026-03-09", notes: "" },
+              payload: {
+                name: "Walk",
+                icon: "footprints",
+                startDate: "2026-03-09",
+                notes: "",
+              },
             });
             ids.push(second.id);
             expect(
@@ -142,6 +149,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
               .create({
                 payload: {
                   name: "Bad date",
+                  icon: "circle-check",
                   startDate: "2026-02-30",
                   notes: "",
                 },

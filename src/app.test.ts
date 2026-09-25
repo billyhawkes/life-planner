@@ -169,6 +169,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
             );
             const habitForm = {
               name: habitName,
+              icon: "book-open",
               startDate: dateKey(new Date()),
               notes: "<script>habit</script>",
               view: "today",
@@ -189,12 +190,37 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
             const habitPatch = yield* Effect.promise(() => createdHabit.text());
             expect(habitPatch).toContain("event: datastar-patch-elements");
             expect(habitPatch).toContain(habitName);
-            expect(habitPatch).toContain("&lt;script&gt;habit&lt;/script&gt;");
+            expect(habitPatch).toContain('<path d="M12 7v14"');
+            expect(habitPatch).not.toContain("<script>habit</script>");
+            expect(habitPatch).not.toContain(
+              "&lt;script&gt;habit&lt;/script&gt;",
+            );
             expect(habitPatch).not.toContain("<dialog");
             expect(habitPatch).not.toContain("<table");
             const habit = (yield* habits.list({})).find(
               (item) => item.name === habitName,
             )!;
+            expect(habit.icon).toBe("book-open");
+            const editHabit = yield* request(
+              `/habits/new?view=today&edit=${habit.id}`,
+              { headers: { "Datastar-Request": "true" } },
+            );
+            const editHabitPatch = yield* Effect.promise(() =>
+              editHabit.text(),
+            );
+            expect(editHabitPatch).toContain("Edit habit");
+            expect(editHabitPatch).toContain('value="book-open" checked');
+            expect(editHabitPatch).toContain(
+              "&lt;script&gt;habit&lt;/script&gt;",
+            );
+            const updatedHabit = yield* request(`/habits/${habit.id}`, {
+              method: "POST",
+              body: new URLSearchParams({ ...habitForm, notes: "Updated" }),
+            });
+            expect(updatedHabit.status).toBe(303);
+            expect((yield* habits.get({ id: habit.id }))?.notes).toBe(
+              "Updated",
+            );
             const completionFields = {
               view: "today",
               date: habitForm.startDate,

@@ -68,9 +68,27 @@ document.addEventListener("click", (event) => {
 
 // Popovers use the top layer so calendar scrolling never clips the dropdown.
 const positionMenu = (menu) => {
-  const trigger = menu
-    .closest(".create-menu")
-    ?.querySelector("[popovertarget]");
+  const owner = menu.closest(".create-menu, .habit-control");
+  const contextOffsetX = Number(menu.dataset.contextOffsetX);
+  const contextOffsetY = Number(menu.dataset.contextOffsetY);
+  if (
+    owner?.matches(".habit-control") &&
+    Number.isFinite(contextOffsetX) &&
+    Number.isFinite(contextOffsetY)
+  ) {
+    const anchor = owner.getBoundingClientRect();
+    const bounds = menu.getBoundingClientRect();
+    const contextX = anchor.left + contextOffsetX;
+    const contextY = anchor.top + contextOffsetY;
+    Object.assign(menu.style, {
+      inset: "auto",
+      margin: "0",
+      left: `${Math.max(8, Math.min(contextX, window.innerWidth - bounds.width - 8))}px`,
+      top: `${Math.max(8, Math.min(contextY, window.innerHeight - bounds.height - 8))}px`,
+    });
+    return;
+  }
+  const trigger = owner?.querySelector("[popovertarget]");
   if (!trigger) return;
   const anchor = trigger.getBoundingClientRect();
   const bounds = menu.getBoundingClientRect();
@@ -93,11 +111,15 @@ document.addEventListener(
   "toggle",
   (event) => {
     if (
-      event.newState === "open" &&
-      event.target instanceof HTMLElement &&
-      event.target.matches(".create-menu-items")
+      !(event.target instanceof HTMLElement) ||
+      !event.target.matches(".create-menu-items")
     )
-      positionMenu(event.target);
+      return;
+    if (event.newState === "open") positionMenu(event.target);
+    else {
+      delete event.target.dataset.contextOffsetX;
+      delete event.target.dataset.contextOffsetY;
+    }
   },
   true,
 );
@@ -107,6 +129,48 @@ const positionOpenMenus = () =>
     .forEach(positionMenu);
 window.addEventListener("resize", positionOpenMenus);
 document.addEventListener("scroll", positionOpenMenus, true);
+
+document.addEventListener("contextmenu", (event) => {
+  if (!(event.target instanceof Element)) return;
+  const habit = event.target.closest("[data-context-menu]");
+  if (!habit) return;
+  const menu = document.getElementById(habit.dataset.contextMenu);
+  if (!(menu instanceof HTMLElement)) return;
+  const bounds = habit.getBoundingClientRect();
+  event.preventDefault();
+  menu.dataset.contextOffsetX = String(event.clientX - bounds.left);
+  menu.dataset.contextOffsetY = String(event.clientY - bounds.top);
+  menu.showPopover();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "ContextMenu" && !(event.shiftKey && event.key === "F10"))
+    return;
+  if (!(event.target instanceof Element)) return;
+  const habit = event.target.closest("[data-context-menu]");
+  if (!habit) return;
+  const menu = document.getElementById(habit.dataset.contextMenu);
+  if (!(menu instanceof HTMLElement)) return;
+  const bounds = habit.getBoundingClientRect();
+  event.preventDefault();
+  menu.dataset.contextOffsetX = "0";
+  menu.dataset.contextOffsetY = String(bounds.height + 4);
+  menu.showPopover();
+});
+
+document.addEventListener(
+  "submit",
+  (event) => {
+    if (!(event.target instanceof HTMLFormElement)) return;
+    const action = new URL(event.target.action, window.location.href);
+    if (!action.pathname.endsWith("/delete")) return;
+    if (window.confirm("Delete this item? This action cannot be undone."))
+      return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  },
+  true,
+);
 
 const syncDialog = () => {
   const dialog = document.querySelector(".form-dialog[open]");

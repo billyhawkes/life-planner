@@ -51,6 +51,14 @@ export const HabitsApiGroup = HttpApiGroup.make("habits")
     }).annotate(OpenApi.Summary, "Create a daily habit"),
   )
   .add(
+    HttpApiEndpoint.patch("updateHabit", "/api/habits/:id", {
+      params: HabitIdParams,
+      payload: HabitPayload,
+      success: Habit,
+      error: [HttpApiError.NotFound, HttpApiError.InternalServerError],
+    }).annotate(OpenApi.Summary, "Update a daily habit"),
+  )
+  .add(
     HttpApiEndpoint.put("completeHabit", "/api/habits/:id/completion", {
       params: HabitIdParams,
       payload: HabitCompletion,
@@ -66,6 +74,13 @@ export const HabitsApiGroup = HttpApiGroup.make("habits")
   )
   .add(
     HttpApiEndpoint.post("create", "/habits", {
+      payload: HabitFields.pipe(HttpApiSchema.asFormUrlEncoded()),
+      success: browserResponse,
+    }).annotate(OpenApi.Exclude, true),
+  )
+  .add(
+    HttpApiEndpoint.post("update", "/habits/:id", {
+      params: HabitIdParams,
       payload: HabitFields.pipe(HttpApiSchema.asFormUrlEncoded()),
       success: browserResponse,
     }).annotate(OpenApi.Exclude, true),

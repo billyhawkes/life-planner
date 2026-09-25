@@ -1,4 +1,4 @@
-import { Context, Effect, Layer, Schema } from "effect";
+import { Context, Effect, Layer, Option, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/unstable/sql";
 import { DatabaseLive, DatabaseTest } from "@/db";
 import {
@@ -23,9 +23,9 @@ export class Habits extends Context.Service<Habits>()("Habits", {
       }),
       Result: Habit,
       execute: ({ payload }) => sql`
-        INSERT INTO habits (id, name, start_date, notes)
-        VALUES (${crypto.randomUUID()}, ${payload.name}, ${payload.startDate}::date, ${payload.notes})
-        RETURNING id, name, start_date::text AS "startDate", notes`,
+        INSERT INTO habits (id, name, icon, start_date, notes)
+        VALUES (${crypto.randomUUID()}, ${payload.name}, ${payload.icon}, ${payload.startDate}::date, ${payload.notes})
+        RETURNING id, name, icon, start_date::text AS "startDate", notes`,
     });
     const create = Effect.fn("Habits.create")(
       (input: { readonly payload: HabitPayload }) =>
@@ -38,12 +38,49 @@ export class Habits extends Context.Service<Habits>()("Habits", {
       Request: Schema.Struct({}).annotate({ identifier: "ListHabitsRequest" }),
       Result: Habit,
       execute: () =>
-        sql`SELECT id, name, start_date::text AS "startDate", notes FROM habits ORDER BY created_at, id`,
+        sql`SELECT id, name, icon, start_date::text AS "startDate", notes FROM habits ORDER BY created_at, id`,
     });
     const list = Effect.fn("Habits.list")((input: {}) =>
       listQuery(input).pipe(
         Effect.mapError(databaseError("Could not load habits")),
       ),
+    );
+
+    const getQuery = SqlSchema.findOneOption({
+      Request: HabitIdParams,
+      Result: Habit,
+      execute: ({ id }) => sql`
+        SELECT id, name, icon, start_date::text AS "startDate", notes
+        FROM habits
+        WHERE id = ${id}
+      `,
+    });
+    const get = Effect.fn("Habits.get")((input: { readonly id: string }) =>
+      getQuery(input).pipe(
+        Effect.map(Option.getOrUndefined),
+        Effect.mapError(databaseError("Could not load habit")),
+      ),
+    );
+
+    const updateQuery = SqlSchema.findOneOption({
+      Request: Schema.Struct({
+        id: Schema.String,
+        payload: HabitPayload,
+      }).annotate({ identifier: "UpdateHabitRequest" }),
+      Result: Habit,
+      execute: ({ id, payload }) => sql`
+        UPDATE habits
+        SET name = ${payload.name}, icon = ${payload.icon}, start_date = ${payload.startDate}::date, notes = ${payload.notes}
+        WHERE id = ${id}
+        RETURNING id, name, icon, start_date::text AS "startDate", notes
+      `,
+    });
+    const update = Effect.fn("Habits.update")(
+      (input: { readonly id: string; readonly payload: HabitPayload }) =>
+        updateQuery(input).pipe(
+          Effect.map(Option.getOrUndefined),
+          Effect.mapError(databaseError("Could not update habit")),
+        ),
     );
 
     const scheduleQuery = SqlSchema.findAll({
@@ -52,7 +89,7 @@ export class Habits extends Context.Service<Habits>()("Habits", {
       }),
       Result: HabitOccurrence,
       execute: ({ after, before }) => sql`
-        SELECT jsonb_build_object('id', h.id, 'name', h.name, 'startDate', h.start_date::text, 'notes', h.notes) AS habit,
+        SELECT jsonb_build_object('id', h.id, 'name', h.name, 'icon', h.icon, 'startDate', h.start_date::text, 'notes', h.notes) AS habit,
           d.day::date::text AS date, coalesce(c.completed, false) AS completed
         FROM generate_series(${after}::date, ${before}::date - 1, interval '1 day') AS d(day)
         JOIN habits h ON h.start_date <= d.day::date
@@ -102,7 +139,7 @@ export class Habits extends Context.Service<Habits>()("Habits", {
           Effect.mapError(databaseError("Could not delete habit")),
         ),
     );
-    return { create, list, schedule, setCompletion, remove };
+    return { create, list, get, update, schedule, setCompletion, remove };
   }),
 }) {
   static readonly baseLayer = Layer.effect(this, this.make);

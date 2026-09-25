@@ -10,7 +10,12 @@ import { renderDashboard } from "@/routes/workouts";
 import { loadDashboard } from "@/services/planner/dashboard";
 import { readOptions, viewUrl } from "@/services/workouts/helpers";
 import { Habits } from "./index";
-import { decodeCompletionForm, decodeHabitForm, HabitDate } from "./schema";
+import {
+  decodeCompletionForm,
+  decodeHabitForm,
+  HabitDate,
+  type Habit,
+} from "./schema";
 import { HabitForm } from "./components/form";
 
 const internalServerError = () => new HttpApiError.InternalServerError({});
@@ -19,11 +24,12 @@ const formResponse = (
   values: Record<string, string>,
   error?: string,
   status = 200,
+  habit?: Habit,
 ) =>
   Effect.gen(function* () {
     const request = yield* HttpServerRequest.HttpServerRequest;
     const options = readOptions(values);
-    const form = HabitForm({ options, values, error });
+    const form = HabitForm({ options, values, error, habit });
     if (isDatastar(request)) return sse([patchElements(form)]);
     const data = yield* loadDashboard(options);
     return HttpServerResponse.text(
@@ -67,6 +73,48 @@ const create = (values: Record<string, string>) =>
         500,
       );
     }
+    return yield* refresh(values);
+  });
+
+const edit = (values: Record<string, string>) =>
+  Effect.gen(function* () {
+    const id = values.edit;
+    if (!id) return yield* formResponse(values);
+    const habits = yield* Habits;
+    const habit = yield* habits.get({ id });
+    if (!habit)
+      return HttpServerResponse.text("Habit not found", { status: 404 });
+    return yield* formResponse(values, undefined, 200, habit);
+  });
+
+const update = (id: string, values: Record<string, string>) =>
+  Effect.gen(function* () {
+    const habits = yield* Habits;
+    const habit = yield* habits.get({ id });
+    if (!habit)
+      return HttpServerResponse.text("Habit not found", { status: 404 });
+    const decoded = yield* decodeHabitForm(values).pipe(Effect.result);
+    if (decoded._tag === "Failure")
+      return yield* formResponse(
+        values,
+        "Enter a habit name (up to 100 characters), a valid start date, and notes up to 2,000 characters.",
+        400,
+        habit,
+      );
+    const saved = yield* habits
+      .update({ id, payload: decoded.success })
+      .pipe(Effect.result);
+    if (saved._tag === "Failure") {
+      yield* Effect.logError(saved.failure);
+      return yield* formResponse(
+        values,
+        "The habit could not be saved. Please try again.",
+        500,
+        habit,
+      );
+    }
+    if (!saved.success)
+      return HttpServerResponse.text("Habit not found", { status: 404 });
     return yield* refresh(values);
   });
 
@@ -158,6 +206,16 @@ export const habitsHandler = HttpApiBuilder.group(
             .pipe(Effect.mapError(internalServerError));
         }),
       )
+      .handle("updateHabit", ({ params, payload }) =>
+        Effect.gen(function* () {
+          const habits = yield* Habits;
+          const habit = yield* habits
+            .update({ id: params.id, payload })
+            .pipe(Effect.mapError(internalServerError));
+          if (!habit) return yield* new HttpApiError.NotFound({});
+          return habit;
+        }),
+      )
       .handle("completeHabit", ({ params, payload }) =>
         Effect.gen(function* () {
           const habits = yield* Habits;
@@ -169,13 +227,16 @@ export const habitsHandler = HttpApiBuilder.group(
         }),
       )
       .handle("new", ({ query }) =>
-        formResponse({
+        edit({
           ...query,
           ...(Schema.is(HabitDate)(query.new) ? { startDate: query.new } : {}),
         }).pipe(Effect.catch(browserError)),
       )
       .handle("create", ({ payload }) =>
         create(payload).pipe(Effect.catch(browserError)),
+      )
+      .handle("update", ({ params, payload }) =>
+        update(params.id, payload).pipe(Effect.catch(browserError)),
       )
       .handle("complete", ({ params, payload }) =>
         complete(params.id, payload).pipe(Effect.catch(browserError)),

@@ -41,16 +41,20 @@ export const renderDashboard = (
             actions: <CreateMenu options={options} date={dateKey(date)} />,
             content: (
               <div class="day-cards">
+                {habits.length > 0 ? (
+                  <div class="habit-controls">
+                    {habits.map((occurrence) => (
+                      <HabitCard
+                        occurrence={occurrence}
+                        options={options}
+                        compact={compact}
+                      />
+                    ))}
+                  </div>
+                ) : null}
                 {workouts.map((workout) => (
                   <WorkoutCard
                     workout={workout}
-                    options={options}
-                    compact={compact}
-                  />
-                ))}
-                {habits.map((occurrence) => (
-                  <HabitCard
-                    occurrence={occurrence}
                     options={options}
                     compact={compact}
                   />

@@ -48,9 +48,41 @@ const habits = Effect.gen(function* () {
   )`;
 });
 
+const habitIcons = Effect.gen(function* () {
+  const sql = yield* SqlClient.SqlClient;
+  yield* sql`ALTER TABLE habits ADD COLUMN IF NOT EXISTS icon TEXT NOT NULL DEFAULT '✓'`;
+});
+
+const lucideHabitIcons = Effect.gen(function* () {
+  const sql = yield* SqlClient.SqlClient;
+  yield* sql`UPDATE habits SET icon = CASE icon
+    WHEN '📖' THEN 'book-open'
+    WHEN '💧' THEN 'droplet'
+    WHEN '🧘' THEN 'person-standing'
+    WHEN '🚶' THEN 'footprints'
+    WHEN '🏃' THEN 'activity'
+    WHEN '💪' THEN 'dumbbell'
+    WHEN '🥗' THEN 'salad'
+    WHEN '💊' THEN 'pill'
+    WHEN '🧹' THEN 'sparkles'
+    WHEN '✍️' THEN 'pencil'
+    WHEN '🌱' THEN 'sprout'
+    ELSE 'circle-check'
+  END`;
+  yield* sql`ALTER TABLE habits ALTER COLUMN icon SET DEFAULT 'circle-check'`;
+});
+
+const removeSparklesHabitIcon = Effect.gen(function* () {
+  const sql = yield* SqlClient.SqlClient;
+  yield* sql`UPDATE habits SET icon = 'sun' WHERE icon = 'sparkles'`;
+});
+
 export const migrate = Migrator.make({})({
   loader: Migrator.fromRecord({
     "001_workouts": initial,
     "002_habits": habits,
+    "003_habit_icons": habitIcons,
+    "004_lucide_habit_icons": lucideHabitIcons,
+    "005_remove_sparkles_habit_icon": removeSparklesHabitIcon,
   }),
 });

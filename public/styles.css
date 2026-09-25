@@ -804,6 +804,108 @@ tbody tr:hover {
   border-color: var(--accent);
   color: var(--on-accent);
 }
+.habit-control {
+  display: block;
+  width: max-content;
+}
+.habit-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-2);
+}
+.habit-control > form {
+  margin: 0;
+}
+.habit-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2);
+  min-height: 34px;
+  padding: var(--size-1) var(--size-2);
+  color: var(--text);
+  border-radius: var(--control-radius);
+}
+.habit-symbol {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+.habit-name {
+  max-width: 18ch;
+  overflow: hidden;
+  font-size: var(--font-size-0);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.habit-toggle[aria-pressed="true"] {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.habit-toggle[aria-pressed="true"] .habit-symbol {
+  color: currentColor;
+}
+.habit-control.compact .habit-toggle {
+  min-height: 28px;
+  padding-block: 2px;
+}
+.habit-control.compact .habit-name {
+  max-width: 10ch;
+}
+.habit-context-menu form {
+  margin: 0;
+}
+.habit-context-menu button {
+  display: flex;
+  align-items: center;
+  gap: var(--size-3);
+  width: 100%;
+  min-height: 0;
+  padding: var(--size-2) var(--size-3);
+  color: var(--danger);
+  background: transparent;
+  border: 0;
+  border-radius: var(--control-radius);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-4);
+}
+.habit-context-menu button:hover:not(:disabled) {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+.habit-icon-picker > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-2);
+  margin-top: var(--size-2);
+}
+.habit-icon-picker label {
+  position: relative;
+}
+.habit-icon-picker input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.habit-icon-picker label > span[aria-hidden="true"] {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: var(--border-size-1) solid var(--field-border);
+  border-radius: var(--control-radius);
+  background: var(--surface);
+  cursor: pointer;
+}
+.habit-icon-picker input:checked + span {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.habit-icon-picker input:focus-visible + span {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 .day-empty {
   margin: 0;
   padding: var(--size-2) 0 var(--size-3);
