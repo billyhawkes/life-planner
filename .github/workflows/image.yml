@@ -53,7 +53,9 @@ jobs:
           context: .
           platforms: linux/amd64
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ghcr.io/billyhawkes/life-planner:sha-${{ github.sha }}
+          tags: |
+            ghcr.io/billyhawkes/life-planner:main
+            ghcr.io/billyhawkes/life-planner:sha-${{ github.sha }}
           labels: |
             org.opencontainers.image.source=https://github.com/billyhawkes/life-planner
             org.opencontainers.image.revision=${{ github.sha }}
