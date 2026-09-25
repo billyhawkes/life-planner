@@ -6,11 +6,11 @@ import { SqlClient } from "effect/unstable/sql";
 import { AppApi } from "@/api";
 import { DatabaseLive } from "@/db";
 import { mcpLayer } from "@/lib/mcp-handler";
+import { styles } from "@/lib/static-assets";
 import { Workouts } from "@/services/workouts";
 import { workoutsHandler } from "@/services/workouts/api.builder";
 import { Habits } from "@/services/habits";
 import { habitsHandler } from "@/services/habits/api.builder";
-import styles from "../public/styles.css" with { type: "text" };
 import datastar from "../public/datastar.js" with { type: "text" };
 import openProps from "../public/open-props-1.7.23.min.css" with { type: "text" };
 import dialogs from "../public/dialogs.js" with { type: "text" };
@@ -38,7 +38,10 @@ export const applicationRoutes = Layer.mergeAll(
   HttpRouter.add(
     "GET",
     "/styles.css",
-    HttpServerResponse.text(styles, { contentType: "text/css" }),
+    HttpServerResponse.text(styles, {
+      contentType: "text/css",
+      headers: { "Cache-Control": "public, max-age=31536000, immutable" },
+    }),
   ),
   HttpRouter.add(
     "GET",
