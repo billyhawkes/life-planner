@@ -23,8 +23,7 @@ export const HabitForm = ({
   const value = (name: "name" | "startDate" | "notes") =>
     values?.[name] ?? habit?.[name] ?? "";
   const selectedIcon =
-    HABIT_ICON_KEYS.find((icon) => icon === values?.icon) ??
-    habit?.icon ??
+    HABIT_ICON_KEYS.find((icon) => icon === (values?.icon ?? habit?.icon)) ??
     HABIT_ICON_KEYS[0];
   return (
     <section id="habit-form">

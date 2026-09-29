@@ -94,6 +94,24 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
             expect(yield* Effect.promise(() => script.text())).toContain(
               "Datastar v1.0.2",
             );
+            const manifest = yield* request("/manifest.webmanifest");
+            expect(manifest.headers.get("content-type")).toContain(
+              "application/manifest+json",
+            );
+            expect((yield* Effect.promise(() => manifest.json())).name).toBe(
+              "Life Planner",
+            );
+            const serviceWorker = yield* request("/service-worker.js");
+            expect(serviceWorker.headers.get("cache-control")).toBe("no-cache");
+            expect(yield* Effect.promise(() => serviceWorker.text())).toContain(
+              'const CACHE_NAME = "life-planner-v1"',
+            );
+            const icon = yield* request("/icon-192.png");
+            expect(icon.status).toBe(200);
+            expect(icon.headers.get("content-type")).toBe("image/png");
+            expect(
+              (yield* Effect.promise(() => icon.arrayBuffer())).byteLength,
+            ).toBeGreaterThan(0);
 
             const form = {
               activityType,

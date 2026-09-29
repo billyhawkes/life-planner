@@ -2,6 +2,7 @@ import { Effect, Layer } from "effect";
 import { HttpRouter, HttpServerResponse } from "effect/unstable/http";
 import { HttpApiBuilder, HttpApiScalar } from "effect/unstable/httpapi";
 import { SqlClient } from "effect/unstable/sql";
+import { readFile } from "node:fs/promises";
 
 import { AppApi } from "@/api";
 import { DatabaseLive } from "@/db";
@@ -15,6 +16,18 @@ import datastar from "../public/datastar.js" with { type: "text" };
 import openProps from "../public/open-props-1.7.23.min.css" with { type: "text" };
 import dialogs from "../public/dialogs.js" with { type: "text" };
 import charts from "../public/charts.js" with { type: "text" };
+import icon180 from "../public/icon-180.png" with { type: "file" };
+import icon192 from "../public/icon-192.png" with { type: "file" };
+import icon512 from "../public/icon-512.png" with { type: "file" };
+import manifest from "../public/manifest.webmanifest" with { type: "text" };
+import pwa from "../public/pwa.js" with { type: "text" };
+import serviceWorker from "../public/service-worker.js" with { type: "text" };
+
+const [icon180Bytes, icon192Bytes, icon512Bytes] = await Promise.all(
+  [icon180, icon192, icon512].map((path) =>
+    readFile(new URL(path, import.meta.url)),
+  ),
+);
 
 const ready = Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;
@@ -63,6 +76,54 @@ export const applicationRoutes = Layer.mergeAll(
     "GET",
     "/charts.js",
     HttpServerResponse.text(charts, { contentType: "text/javascript" }),
+  ),
+  HttpRouter.add(
+    "GET",
+    "/manifest.webmanifest",
+    HttpServerResponse.text(manifest, {
+      contentType: "application/manifest+json",
+      headers: { "Cache-Control": "public, max-age=3600" },
+    }),
+  ),
+  HttpRouter.add(
+    "GET",
+    "/pwa.js",
+    HttpServerResponse.text(pwa, { contentType: "text/javascript" }),
+  ),
+  HttpRouter.add(
+    "GET",
+    "/service-worker.js",
+    HttpServerResponse.text(serviceWorker, {
+      contentType: "text/javascript",
+      headers: {
+        "Cache-Control": "no-cache",
+        "Service-Worker-Allowed": "/",
+      },
+    }),
+  ),
+  HttpRouter.add(
+    "GET",
+    "/icon-180.png",
+    HttpServerResponse.uint8Array(icon180Bytes, {
+      contentType: "image/png",
+      headers: { "Cache-Control": "public, max-age=31536000, immutable" },
+    }),
+  ),
+  HttpRouter.add(
+    "GET",
+    "/icon-192.png",
+    HttpServerResponse.uint8Array(icon192Bytes, {
+      contentType: "image/png",
+      headers: { "Cache-Control": "public, max-age=31536000, immutable" },
+    }),
+  ),
+  HttpRouter.add(
+    "GET",
+    "/icon-512.png",
+    HttpServerResponse.uint8Array(icon512Bytes, {
+      contentType: "image/png",
+      headers: { "Cache-Control": "public, max-age=31536000, immutable" },
+    }),
   ),
   HttpRouter.add("GET", "/api/health/ready", ready),
   HttpRouter.add(

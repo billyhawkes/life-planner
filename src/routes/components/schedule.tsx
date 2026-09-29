@@ -33,8 +33,22 @@ export const ScheduleDays = ({
                   dateKey(date) === dateKey(new Date()) ? "current-day" : ""
                 }
                 datetime={dateKey(date)}
+                aria-label={date.toLocaleDateString("en", {
+                  weekday: "long",
+                  month: "long",
+                  day: "numeric",
+                })}
               >
-                {date.getDate()}
+                <span class="calendar-day-number" aria-hidden="true">
+                  {date.getDate()}
+                </span>
+                <span class="calendar-day-label" aria-hidden="true">
+                  {date.toLocaleDateString("en", {
+                    weekday: "long",
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </span>
               </time>
               {actions}
             </div>

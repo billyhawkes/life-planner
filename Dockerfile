@@ -9,7 +9,7 @@ RUN bun run build
 
 FROM oven/bun:1.4.0
 WORKDIR /app
-COPY --from=build --chown=bun:bun /app/dist/server.js ./server.js
+COPY --from=build --chown=bun:bun /app/dist ./
 USER bun
 ENV PORT=3000
 EXPOSE 3000

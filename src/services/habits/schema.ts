@@ -6,7 +6,7 @@ export const HABIT_ICON_KEYS = [
   "droplet",
   "person-standing",
   "footprints",
-  "activity",
+  "music",
   "dumbbell",
   "salad",
   "pill",
@@ -24,7 +24,7 @@ export const HABIT_ICON_LABELS: Record<
   droplet: "Water",
   "person-standing": "Mindfulness",
   footprints: "Walking",
-  activity: "Activity",
+  music: "Music",
   dumbbell: "Strength",
   salad: "Nutrition",
   pill: "Medication",
@@ -33,7 +33,11 @@ export const HABIT_ICON_LABELS: Record<
   sun: "Sun",
 };
 
-export const HabitIcon = Schema.Literals(HABIT_ICON_KEYS).annotate({
+export const HabitIcon = Schema.Literals([
+  ...HABIT_ICON_KEYS,
+  // Kept for habits saved before the activity icon left the picker.
+  "activity",
+]).annotate({
   identifier: "HabitIcon",
 });
 

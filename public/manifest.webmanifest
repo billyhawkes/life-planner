@@ -1,0 +1,49 @@
+{
+  "id": "/",
+  "name": "Life Planner",
+  "short_name": "Planner",
+  "description": "Plan workouts, build habits, and keep your week on track.",
+  "start_url": "/workouts?view=today",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7f8fa",
+  "theme_color": "#15803d",
+  "categories": ["health", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Today",
+      "short_name": "Today",
+      "url": "/workouts?view=today"
+    },
+    {
+      "name": "This week",
+      "short_name": "Week",
+      "url": "/workouts?view=week"
+    },
+    {
+      "name": "Calendar",
+      "short_name": "Calendar",
+      "url": "/workouts?view=calendar"
+    }
+  ]
+}

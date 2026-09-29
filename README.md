@@ -47,8 +47,8 @@ bun run build
 bun run preview
 ```
 
-The Bun bundle at `dist/server.js` embeds CSS and the vendored Datastar runtime.
-It can be run with `bun dist/server.js`; no asset directory or frontend build
+The production output in `dist/` contains the Bun server bundle and generated
+application icon assets. Run it with `bun dist/server.js`; no frontend build
 server is required. `bun start` runs the source without watch mode.
 
 ## Import Apple Health

@@ -21,3 +21,19 @@ declare module "*charts.js" {
   const content: string;
   export default content;
 }
+declare module "*pwa.js" {
+  const content: string;
+  export default content;
+}
+declare module "*service-worker.js" {
+  const content: string;
+  export default content;
+}
+declare module "*.webmanifest" {
+  const content: string;
+  export default content;
+}
+declare module "*.png" {
+  const content: string;
+  export default content;
+}
