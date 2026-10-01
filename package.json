@@ -6,10 +6,10 @@
     "@/*": "./src/*"
   },
   "scripts": {
-    "dev": "bun --watch src/server.ts",
+    "dev": "NODE_ENV=development PORT=3010 SITE_URL=http://localhost:3010 bun --watch src/server.ts",
     "build": "bun build src/server.ts --target=bun --outdir=dist",
-    "start": "bun src/server.ts",
-    "preview": "bun dist/server.js",
+    "start": "NODE_ENV=production bun src/server.ts",
+    "preview": "NODE_ENV=production bun dist/server.js",
     "db:migrate": "bun scripts/migrate.ts",
     "type:check": "tsc --noEmit",
     "lint": "oxlint",

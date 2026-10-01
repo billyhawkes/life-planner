@@ -19,7 +19,9 @@ export const renderDocument = (body: Html) =>
           <script type="module" src="/dialogs.js" />
           <script type="module" src="/charts.js" />
           <script type="module" src="/datastar.js" />
-          <script type="module" src="/pwa.js" />
+          {process.env.NODE_ENV === "production" ? (
+            <script type="module" src="/pwa.js" />
+          ) : null}
         </head>
         <body>{body}</body>
       </html>

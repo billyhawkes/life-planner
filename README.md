@@ -30,13 +30,20 @@ cp .env.example .env
 bun run dev
 ```
 
-Open <http://localhost:3000>. Migrations run automatically before the server
+Open <http://localhost:3010>. Migrations run automatically before the server
 starts. `bun run db:migrate` also runs them explicitly.
+
+The development command uses a dedicated port and disables service-worker
+registration, so its offline cache cannot affect another project on port 3000.
+Service workers are enabled only when `NODE_ENV=production` (set by `bun start`,
+`bun run preview`, and the Docker image). Existing workers must be unregistered
+once through browser DevTools; changing the development command does not remove
+workers previously installed on another origin.
 
 | Variable            | Purpose                                                      |
 | ------------------- | ------------------------------------------------------------ |
 | `DATABASE_URL`      | PostgreSQL connection for the app and importer               |
-| `PORT`              | HTTP port; defaults to `3000`                                |
+| `PORT`              | HTTP port; defaults to `3000`; `bun run dev` sets `3010`     |
 | `SITE_URL`          | MCP's loopback API URL; defaults to `http://localhost:$PORT` |
 | `TEST_DATABASE_URL` | Separate PostgreSQL database for integration tests           |
 
@@ -48,7 +55,7 @@ bun run preview
 ```
 
 The production output in `dist/` contains the Bun server bundle and generated
-application icon assets. Run it with `bun dist/server.js`; no frontend build
+application icon assets. Run it with `NODE_ENV=production bun dist/server.js`; no frontend build
 server is required. `bun start` runs the source without watch mode.
 
 ## Import Apple Health
