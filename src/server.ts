@@ -1,6 +1,6 @@
 import { BunHttpServer, BunRuntime } from "@effect/platform-bun";
 import { Config, Effect, Layer } from "effect";
-import { HttpRouter } from "effect/unstable/http";
+import { HttpRouter } from "effect/http";
 import { AppLive } from "@/app";
 
 const ServerLive = Layer.unwrap(

@@ -2,8 +2,8 @@ import { describe, expect, it } from "bun:test";
 import { BunHttpServer, BunServices } from "@effect/platform-bun";
 import { Effect, Layer } from "effect";
 import { BlobWriter, TextReader, ZipWriter } from "@zip.js/zip.js";
-import { HttpRouter } from "effect/unstable/http";
-import { SqlClient } from "effect/unstable/sql";
+import { HttpRouter } from "effect/http";
+import { SqlClient } from "effect/sql";
 
 import { applicationRoutes } from "@/app";
 import { DatabaseTest } from "@/db";

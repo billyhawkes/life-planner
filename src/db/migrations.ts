@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { Migrator, SqlClient } from "effect/unstable/sql";
+import { Migrator, SqlClient } from "effect/sql";
 
 // IF NOT EXISTS adopts databases previously managed by Drizzle without replacing data.
 const initial = Effect.gen(function* () {

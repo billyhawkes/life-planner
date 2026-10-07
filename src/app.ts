@@ -1,7 +1,7 @@
 import { Effect, Layer } from "effect";
-import { HttpRouter, HttpServerResponse } from "effect/unstable/http";
-import { HttpApiBuilder, HttpApiScalar } from "effect/unstable/httpapi";
-import { SqlClient } from "effect/unstable/sql";
+import { HttpRouter, HttpServerResponse } from "effect/http";
+import { HttpApiBuilder, HttpApiScalar } from "effect/http-api";
+import { SqlClient } from "effect/sql";
 import { readFile } from "node:fs/promises";
 
 import { AppApi } from "@/api";

@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { Multipart } from "effect/unstable/http";
+import { Multipart } from "effect/http";
 
 export const HealthImportPayload = Schema.Struct({
   archive: Schema.optional(Multipart.SingleFileSchema),

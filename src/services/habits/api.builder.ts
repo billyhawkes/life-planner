@@ -1,6 +1,6 @@
 import { Effect, Schema } from "effect";
-import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
-import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi";
+import { HttpServerRequest, HttpServerResponse } from "effect/http";
+import { HttpApiBuilder, HttpApiError } from "effect/http-api";
 import { AppApi } from "@/api";
 import { isDatastar, sse } from "@/lib/browser";
 import { patchElements } from "@/lib/datastar";

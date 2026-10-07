@@ -1,4 +1,4 @@
-import { HttpApi, OpenApi } from "effect/unstable/httpapi";
+import { HttpApi, OpenApi } from "effect/http-api";
 
 import { WorkoutsApiGroup } from "@/services/workouts/api.group";
 import { HabitsApiGroup } from "@/services/habits/api.group";

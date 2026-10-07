@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { Effect, Layer } from "effect";
-import { SqlClient } from "effect/unstable/sql";
+import { SqlClient } from "effect/sql";
 import { DatabaseTest } from "@/db";
 import { Habits } from "./index";
 import { decodeCompletionForm, decodeHabitForm } from "./schema";

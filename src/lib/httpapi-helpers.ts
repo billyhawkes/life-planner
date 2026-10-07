@@ -7,7 +7,7 @@ import {
   Schema,
   SchemaRepresentation,
 } from "effect";
-import { HttpApi, OpenApi } from "effect/unstable/httpapi";
+import { HttpApi, OpenApi } from "effect/http-api";
 
 export const JsonObjectSchema = Schema.Record(
   Schema.String,

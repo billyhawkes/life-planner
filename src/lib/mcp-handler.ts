@@ -1,5 +1,5 @@
 import { Layer } from "effect";
-import { FetchHttpClient } from "effect/unstable/http";
+import { FetchHttpClient } from "effect/http";
 
 import { AppApi } from "@/api";
 import { ApiClient } from "@/lib/httpapi-client";

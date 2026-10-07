@@ -1,4 +1,4 @@
-import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
+import { HttpServerRequest, HttpServerResponse } from "effect/http";
 
 export const isDatastar = (request: HttpServerRequest.HttpServerRequest) =>
   request.headers["datastar-request"] === "true";
