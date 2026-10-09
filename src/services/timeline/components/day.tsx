@@ -13,6 +13,25 @@ import {
 } from "@/services/workouts/helpers";
 import { TimerControls } from "./timer";
 
+export const TimeTrackedSummary = ({
+  blocks,
+  day,
+  now = Date.now(),
+}: {
+  blocks: readonly TimeBlock[];
+  day: string;
+  now?: number;
+}) => (
+  <div class="timeline-section-heading">
+    <span>
+      {duration(
+        blocks.reduce((sum, block) => sum + blockMinutes(block, day, now), 0),
+      )}{" "}
+      tracked
+    </span>
+  </div>
+);
+
 export const DayTimeline = ({
   labels,
   blocks,
@@ -20,6 +39,7 @@ export const DayTimeline = ({
   options,
   window = timelineWindow(blocks, [day]),
   showHours = true,
+  showSummary = true,
 }: {
   labels: readonly TimeLabel[];
   blocks: readonly TimeBlock[];
@@ -27,6 +47,7 @@ export const DayTimeline = ({
   options?: ViewOptions;
   window?: TimelineWindow;
   showHours?: boolean;
+  showSummary?: boolean;
 }) => {
   const now = Date.now();
   const today = day === dateKey(new Date());
@@ -59,17 +80,9 @@ export const DayTimeline = ({
       class={`day-timeline ${today ? "is-today" : ""} ${showHours ? "has-hour-labels" : ""}`}
       aria-label={`Time tracked on ${day}`}
     >
-      <div class="timeline-section-heading">
-        <span>
-          {duration(
-            visible.reduce(
-              (sum, block) => sum + blockMinutes(block, day, now),
-              0,
-            ),
-          )}{" "}
-          tracked
-        </span>
-      </div>
+      {showSummary ? (
+        <TimeTrackedSummary blocks={visible} day={day} now={now} />
+      ) : null}
       {today && !options ? (
         <TimerControls
           labels={labels}
@@ -93,9 +106,11 @@ export const DayTimeline = ({
             const top = ((hourDate.getTime() - start) / (end - start)) * 100;
             return (
               <div class="timeline-hour" style={`top:${top}%`}>
-                <span aria-hidden={!showHours}>
-                  {String(hour).padStart(2, "0")}:00
-                </span>
+                {hour !== 0 ? (
+                  <span aria-hidden={!showHours}>
+                    {String(hour).padStart(2, "0")}:00
+                  </span>
+                ) : null}
                 {labels.length ? (
                   <a
                     class="timeline-slot"

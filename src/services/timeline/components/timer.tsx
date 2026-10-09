@@ -25,50 +25,48 @@ export const TimerControls = ({
   return (
     <div class={className} aria-label="Time tracker">
       {labels.length ? (
-        <>
-          <TimeForm
-            action="/timeline/start"
-            day={day}
-            options={options}
-            className="day-timer-start"
-          >
-            <LabelSelect labels={labels} selected={running?.labelId} compact />
-            <button
-              type="submit"
-              class="timeline-play"
-              title={running ? "Switch timer" : "Start timer"}
-              aria-label={running ? "Switch timer" : "Start timer"}
-            >
-              ▶
-            </button>
-          </TimeForm>
+        <TimeForm
+          action={
+            running ? `/timeline/blocks/${running.id}/stop` : "/timeline/start"
+          }
+          day={day}
+          options={options}
+          className="day-timer-start"
+        >
+          <LabelSelect
+            labels={labels}
+            selected={running?.labelId}
+            compact
+            disabled={Boolean(running)}
+          />
           {running ? (
             <div class="day-timer-running">
-              <span class="timeline-live" aria-label="Timer running">
-                ●
-              </span>
+              <button
+                type="submit"
+                class="timeline-stop secondary"
+                aria-label="Stop timer"
+                title="Stop timer"
+              >
+                ■
+              </button>
               <strong
+                aria-label="Elapsed time"
                 {...{
                   "data-on-interval__duration.1s": `const seconds = Math.max(0, Math.floor((Date.now() - ${Date.parse(running.startTime)}) / 1000)); el.textContent = Math.floor(seconds / 3600) + ':' + String(Math.floor(seconds / 60) % 60).padStart(2, '0') + ':' + String(seconds % 60).padStart(2, '0')`,
                 }}
               >{`${Math.floor(seconds / 3600)}:${String(Math.floor(seconds / 60) % 60).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`}</strong>
-              <TimeForm
-                action={`/timeline/blocks/${running.id}/stop`}
-                day={day}
-                options={options}
-              >
-                <button
-                  type="submit"
-                  class="timeline-stop secondary"
-                  aria-label="Stop timer"
-                  title="Stop timer"
-                >
-                  ■
-                </button>
-              </TimeForm>
             </div>
-          ) : null}
-        </>
+          ) : (
+            <button
+              type="submit"
+              class="timeline-play"
+              title="Start timer"
+              aria-label="Start timer"
+            >
+              ▶
+            </button>
+          )}
+        </TimeForm>
       ) : (
         <span class="timeline-hint">+ → Goal to start tracking</span>
       )}

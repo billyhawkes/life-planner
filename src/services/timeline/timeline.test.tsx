@@ -55,9 +55,31 @@ describe("timeline presentation and validation", () => {
       values: { day, planner: "true" },
     }).value;
     expect(dialog).toContain('class="day-timer-controls time-dialog-timer"');
-    expect(dialog).toContain('action="/timeline/start"');
+    expect(dialog).not.toContain('action="/timeline/start"');
+    expect(dialog).not.toContain('class="timeline-play"');
+    expect(dialog).toContain('aria-label="Elapsed time"');
     expect(dialog).toContain('<span class="sr-only">Label</span>');
     expect(dialog).toContain('action="/timeline/blocks/running/stop"');
+    const idleDialog = BlockForm({
+      labels,
+      blocks: [],
+      values: { day },
+    }).value;
+    expect(idleDialog).toContain('action="/timeline/start"');
+    expect(idleDialog).toContain('class="timeline-play"');
+    expect(idleDialog).not.toContain('aria-label="Stop timer"');
+
+    const editDialog = BlockForm({
+      labels,
+      blocks,
+      options: readOptions({ view: "week" }),
+      values: { day, planner: "true", edit: "running" },
+    }).value;
+    expect(editDialog).toContain('id="time-block-edit"');
+    expect(editDialog).toContain(
+      '<footer class="time-block-actions"><button type="submit" form="time-block-edit">Save changes</button><form',
+    );
+    expect(editDialog).toContain('action="/timeline/blocks/running/delete"');
     expect(dialog.indexOf('<dialog id="time-block-dialog"')).toBeLessThan(
       dialog.indexOf('aria-label="Timer controls"'),
     );

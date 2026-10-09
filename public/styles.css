@@ -37,7 +37,6 @@
   position: absolute;
   top: -0.65rem;
   padding-inline: 0.5rem;
-  background: var(--surface);
   font-size: 0.65rem;
   font-variant-numeric: tabular-nums;
   color: var(--muted);
@@ -191,9 +190,13 @@
   margin-top: 0.25rem;
 }
 .week-timelines {
+  --week-heading-height: 66px;
   display: grid;
   grid-template-columns: repeat(7, minmax(155px, 1fr));
-  grid-template-rows: 66px auto 1fr;
+  grid-template-rows: var(--week-heading-height) max-content max-content minmax(
+      min-content,
+      1fr
+    );
   gap: 0;
   overflow-x: auto;
   padding: 0 0 1px;
@@ -206,7 +209,7 @@
 .week-timelines > .schedule-day {
   display: grid;
   grid-template-rows: subgrid;
-  grid-row: 1 / span 3;
+  grid-row: 1 / span 4;
   align-content: start;
   min-width: 0;
   padding: 0;
@@ -223,6 +226,16 @@
   padding: 12px 10px;
   border-bottom: 1px solid var(--border);
   margin: 0;
+}
+.week-timelines .schedule-day-top {
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: 1 / span 3;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.week-timelines .timeline-hour:first-child {
+  border-top: 0;
 }
 .week-timelines .schedule-day-heading h3 {
   font-size: 0.75rem;
@@ -257,12 +270,10 @@
   flex-wrap: wrap;
 }
 .week-timelines .day-cards {
-  overflow-y: auto;
-  min-height: 0;
+  min-height: min-content;
   margin: 0;
   padding: 8px;
   align-content: start;
-  max-height: 120px;
 }
 .week-timelines .log-card {
   padding: 5px;
@@ -289,13 +300,16 @@
   font-size: 0.65rem;
 }
 .week-timelines .timeline-section-heading {
+  justify-content: flex-start;
   padding: 4px 8px;
-  height: 24px;
+  min-height: 28px;
+  border-top: 1px solid var(--border);
 }
 .timeline-section-heading {
   color: var(--muted);
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
+  padding-bottom: 16px;
 }
 .week-timelines .timeline-section-heading {
   gap: 0.25rem;
@@ -403,12 +417,15 @@
 .has-hour-labels .timeline-hour > span {
   display: block;
   left: -44px;
+  width: 44px;
+  padding-inline: 0;
+  text-align: center;
 }
 .has-hour-labels .timeline-slot {
   left: 0;
 }
 .today-timeline .timeline-section-heading {
-  padding: 10px 14px;
+  padding: 10px 14px 22px;
 }
 .today-timeline .day-timer-controls {
   display: flex;
@@ -480,6 +497,7 @@
 }
 body {
   margin: 0;
+  min-height: 100dvh;
 }
 a {
   color: var(--accent);
@@ -576,6 +594,7 @@ select:focus-visible {
 }
 main {
   padding: var(--size-8) var(--size-7);
+  min-height: 100dvh;
 }
 h1,
 h2 {
@@ -646,13 +665,35 @@ footer {
   outline-offset: calc(-1 * var(--size-1));
 }
 #dashboard {
-  padding-top: var(--size-5);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  width: 100%;
+  min-width: 0;
+}
+.planner-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: var(--size-5) var(--size-7);
+}
+.planner-content > * {
+  flex-shrink: 0;
+}
+.planner-content
+  > .tracking-controls:not(:has(form, .timeline-error, .tracking-goal-list)) {
+  gap: 0;
+  margin: 0;
 }
 .planner-topbar {
   gap: var(--size-5);
   border-bottom: var(--border-size-1) solid var(--border);
-  padding-bottom: var(--size-5);
-  margin-bottom: var(--size-7);
+  padding: var(--size-4) var(--size-7);
+  margin: 0;
+  background: var(--surface);
+  flex-shrink: 0;
 }
 .planner-topbar .tabs {
   margin: 0;
@@ -996,14 +1037,69 @@ tbody tr:hover {
 }
 .calendar {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  min-width: 960px;
+  grid-template-columns: repeat(7, minmax(120px, 1fr));
   margin-top: var(--size-4);
   gap: 1px;
   background: var(--border);
   border: 1px solid var(--border);
   border-radius: var(--control-radius);
   overflow: hidden;
+}
+.calendar-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.calendar-toolbar {
+  flex-shrink: 0;
+  padding: var(--size-3);
+}
+:is(.planner-view-week, .planner-view-calendar) > .planner-content {
+  padding: 0;
+}
+.planner-view-week .week-timelines {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+}
+.planner-view-calendar .calendar {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+}
+@media (min-width: 769px) {
+  #dashboard:is(.planner-view-week, .planner-view-calendar) {
+    height: 100dvh;
+  }
+  :is(.planner-view-week, .planner-view-calendar) > .planner-content {
+    overflow: auto;
+  }
+  .planner-content > :is(.week-timelines, .calendar-panel) {
+    flex: 1;
+    min-height: 0;
+  }
+  .week-timelines {
+    overflow: auto;
+  }
+  .week-timelines .schedule-day-top {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: var(--surface);
+  }
+  .calendar-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+  }
+  .calendar {
+    min-height: 100%;
+    grid-template-rows: auto repeat(
+        var(--calendar-weeks, 6),
+        minmax(140px, 1fr)
+      );
+    margin-top: 0;
+  }
 }
 .weekday {
   text-align: center;
@@ -1146,6 +1242,26 @@ tbody tr:hover {
 .time-dialog-timer .day-timer-running {
   margin: 0;
   gap: var(--size-2);
+}
+.day-timer-start > .day-timer-running {
+  margin: 0;
+  flex-shrink: 0;
+}
+.time-block-actions {
+  flex-wrap: wrap;
+}
+.time-block-actions form {
+  margin: 0;
+}
+.time-block-actions .danger {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--danger);
+}
+.time-block-actions .danger:hover:not(:disabled) {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+  color: var(--danger);
 }
 .schedule-day {
   margin-block: 0 var(--size-7);
@@ -1653,6 +1769,10 @@ html:has(dialog:modal) {
   }
   .planner-topbar {
     gap: var(--size-3);
+    padding: var(--size-3);
+  }
+  .planner-content {
+    padding: var(--size-3);
   }
   .planner-topbar .tabs a {
     padding-inline: var(--size-2);

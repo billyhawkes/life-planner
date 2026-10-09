@@ -5,6 +5,7 @@ export type ScheduleDay = {
   readonly date: Date;
   readonly content: Html;
   readonly actions?: Html;
+  readonly pinnedContent?: Html;
 };
 
 const dateKey = (date: Date) =>
@@ -19,7 +20,10 @@ export const ScheduleDays = ({
 }) =>
   month ? (
     <div class="calendar-scroll">
-      <div class="calendar">
+      <div
+        class="calendar"
+        style={`--calendar-weeks:${Math.ceil(days.length / 7)}`}
+      >
         {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
           <strong class="weekday">{day}</strong>
         ))}
@@ -59,27 +63,32 @@ export const ScheduleDays = ({
     </div>
   ) : (
     <>
-      {days.map(({ date, content, actions }) => (
+      {days.map(({ date, content, actions, pinnedContent }) => (
         <section class="schedule-day">
-          <header class="schedule-day-heading">
-            <h3>
-              <time datetime={dateKey(date)}>
-                <span>
-                  {date.toLocaleDateString("en", { weekday: "long" })}
-                </span>
-                <span class="day-date">
-                  {date.toLocaleDateString("en", {
-                    month: "short",
-                    day: "numeric",
-                  })}
-                </span>
-              </time>
-              {dateKey(date) === dateKey(new Date()) ? (
-                <span class="today-label">Today</span>
-              ) : null}
-            </h3>
-            {actions}
-          </header>
+          <div
+            class={pinnedContent ? "schedule-day-top" : "schedule-day-header"}
+          >
+            <header class="schedule-day-heading">
+              <h3>
+                <time datetime={dateKey(date)}>
+                  <span>
+                    {date.toLocaleDateString("en", { weekday: "long" })}
+                  </span>
+                  <span class="day-date">
+                    {date.toLocaleDateString("en", {
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </span>
+                </time>
+                {dateKey(date) === dateKey(new Date()) ? (
+                  <span class="today-label">Today</span>
+                ) : null}
+              </h3>
+              {actions}
+            </header>
+            {pinnedContent}
+          </div>
           {content}
         </section>
       ))}

@@ -96,6 +96,7 @@ export const BlockForm = ({
           </section>
         ) : null}
         <TimeForm
+          id="time-block-edit"
           action={action}
           day={day}
           options={values.planner === "true" ? options : undefined}
@@ -152,23 +153,23 @@ export const BlockForm = ({
               </textarea>
             </label>
           </div>
-          <div class="form-actions">
-            <button type="submit">
-              {block ? "Save changes" : "Add block"}
-            </button>
-          </div>
         </TimeForm>
-        {block ? (
-          <TimeForm
-            action={`/timeline/blocks/${block.id}/delete`}
-            day={day}
-            options={values.planner === "true" ? options : undefined}
-          >
-            <button type="submit" class="danger">
-              Delete block
-            </button>
-          </TimeForm>
-        ) : null}
+        <footer class="time-block-actions">
+          <button type="submit" form="time-block-edit">
+            {block ? "Save changes" : "Add block"}
+          </button>
+          {block ? (
+            <TimeForm
+              action={`/timeline/blocks/${block.id}/delete`}
+              day={day}
+              options={values.planner === "true" ? options : undefined}
+            >
+              <button type="submit" class="danger">
+                Delete block
+              </button>
+            </TimeForm>
+          ) : null}
+        </footer>
       </dialog>
     </section>
   );

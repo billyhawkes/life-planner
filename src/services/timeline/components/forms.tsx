@@ -8,14 +8,17 @@ export const TimeForm = ({
   children,
   className,
   options,
+  id,
 }: {
   action: string;
   day: string;
   children: Html | readonly Html[];
   className?: string;
   options?: ViewOptions;
+  id?: string;
 }) => (
   <form
+    id={id}
     method="post"
     action={action}
     class={className}
@@ -37,14 +40,16 @@ export const LabelSelect = ({
   labels,
   selected,
   compact = false,
+  disabled = false,
 }: {
   labels: readonly TimeLabel[];
   selected?: string;
   compact?: boolean;
+  disabled?: boolean;
 }) => (
   <label>
     <span class={compact ? "sr-only" : undefined}>Label</span>
-    <select name="labelId" required>
+    <select name="labelId" required disabled={disabled}>
       {labels.map((label) => (
         <option value={label.id} selected={label.id === selected}>
           {label.name}
