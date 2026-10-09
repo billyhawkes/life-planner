@@ -19,6 +19,7 @@
   "dependencies": {
     "@effect/platform-bun": "4.0.0",
     "@effect/sql-pg": "4.0.0",
+    "@krak-stack/registry": "0.1.38",
     "@zip.js/zip.js": "2.8.34",
     "effect": "4.0.0"
   },
