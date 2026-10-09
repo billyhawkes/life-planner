@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { adjustRange } from "./timeline.js";
+import { adjustRange, updateLiveTimeline } from "./timeline.js";
 
 const minute = 60000;
 const origin = Date.parse("2026-01-01T00:00:00Z");
@@ -8,6 +8,96 @@ const range = {
   end: origin + 10 * 60 * minute,
   sourceStart: origin,
 };
+
+const liveFixture = (blockStart = range.start) => {
+  const grid = {
+    dataset: {
+      timelineStart: String(origin),
+      timelineEnd: String(origin + 86400000),
+      dayStart: String(origin),
+      dayEnd: String(origin + 86400000),
+    },
+  };
+  const text = { textContent: "" };
+  const block = {
+    dataset: {
+      blockStart: new Date(blockStart).toISOString(),
+      blockName: "Work",
+      blockNotes: "Focus",
+    },
+    style: {},
+    classList: {
+      toggle: (_name, value) => {
+        block.short = value;
+      },
+    },
+    closest: () => grid,
+    querySelector: () => text,
+  };
+  const markerText = { textContent: "" };
+  const marker = {
+    style: {},
+    closest: () => grid,
+    querySelector: () => markerText,
+    setAttribute: (_name, value) => {
+      marker.label = value;
+    },
+  };
+  const summary = {
+    dataset: {
+      runningStart: new Date(blockStart).toISOString(),
+      trackedMinutes: "30",
+      dayStart: String(origin),
+      dayEnd: String(origin + 86400000),
+    },
+    textContent: "",
+  };
+  const root = {
+    querySelectorAll: (selector) => {
+      if (selector === ".timeline-block.is-running") return [block];
+      if (selector === ".timeline-now") return [marker];
+      return [summary];
+    },
+  };
+  return { root, block, text, marker, markerText, summary };
+};
+
+describe("live timeline updates", () => {
+  it("grows a running slot, updates its duration and total, and moves the current-time marker", () => {
+    const { root, block, text, marker, summary } = liveFixture();
+    updateLiveTimeline(root, range.start + 15 * minute);
+    expect(Number.parseFloat(block.style.height)).toBeCloseTo(
+      (15 / 1440) * 100,
+    );
+    expect(text.textContent).toBe("0h 15m · Running");
+    expect(block.short).toBe(true);
+    updateLiveTimeline(root, range.start + 60 * minute);
+    expect(Number.parseFloat(block.style.height)).toBeCloseTo(
+      (60 / 1440) * 100,
+    );
+    expect(Number.parseFloat(marker.style.top)).toBeCloseTo((10 / 24) * 100);
+    expect(marker.hidden).toBe(false);
+    expect(marker.label).toContain("Current time");
+    expect(text.textContent).toBe("1h 0m · Running");
+    expect(block.short).toBe(false);
+    expect(block.title).toContain("1h 0m · Focus");
+    expect(summary.textContent).toBe("1h 30m tracked");
+  });
+  it("clips overnight slots and hides the current-time marker outside the displayed day", () => {
+    const { root, block, text, marker, summary } = liveFixture(
+      origin - 60 * minute,
+    );
+    updateLiveTimeline(root, origin + 60 * minute);
+    expect(block.style.top).toBe("0%");
+    expect(text.textContent).toBe("1h 0m · Running");
+    expect(summary.textContent).toBe("1h 30m tracked");
+    updateLiveTimeline(root, origin + 86400000 + 60 * minute);
+    expect(block.style.height).toBe("100%");
+    expect(text.textContent).toBe("24h 0m · Running");
+    expect(marker.hidden).toBe(true);
+    expect(summary.textContent).toBe("24h 30m tracked");
+  });
+});
 
 describe("calendar drag calculations", () => {
   it("moves the whole block and snaps to 15-minute boundaries", () => {
@@ -153,7 +243,8 @@ describe("drag rendering lifecycle", () => {
       addEventListener: (name, callback) => listeners.set(name, callback),
       querySelector: (selector) =>
         selector === ".week-timelines" ? week : null,
-      querySelectorAll: () => [block],
+      querySelectorAll: (selector) =>
+        selector === ".timeline-block.is-saving" ? [block] : [],
       createElement: () => ({
         className: "",
         style: {},
@@ -176,6 +267,7 @@ describe("drag rendering lifecycle", () => {
       },
       requestAnimationFrame: () => 1,
       cancelAnimationFrame: () => {},
+      setInterval: () => 1,
     };
     const previous = new Map(
       Object.keys(globals).map((name) => [

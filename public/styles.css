@@ -719,7 +719,11 @@ summary:focus-visible,
   outline: var(--border-size-2) solid var(--accent);
   outline-offset: var(--size-1);
 }
-select:focus-visible {
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible,
+a:focus-visible {
   outline-offset: 0;
 }
 main {
@@ -791,9 +795,6 @@ footer {
   color: var(--accent-hover);
   background: var(--accent-soft);
 }
-.tabs a:focus-visible {
-  outline-offset: calc(-1 * var(--size-1));
-}
 #dashboard {
   display: flex;
   flex-direction: column;
@@ -818,31 +819,73 @@ footer {
   margin: 0;
 }
 .planner-topbar {
-  gap: var(--size-5);
+  --control-size: 40px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--size-3);
   border-bottom: var(--border-size-1) solid var(--border);
-  padding: var(--size-4) var(--size-7);
+  padding: 8px 16px;
   margin: 0;
   background: var(--surface);
   flex-shrink: 0;
 }
 .planner-topbar .tabs {
+  height: var(--control-size);
+  align-items: center;
   margin: 0;
   border: 0;
-  gap: var(--size-1);
+  gap: 2px;
+  padding: 2px;
+  background: var(--canvas);
+  border-radius: 10px;
+}
+.planner-topbar .tabs > a,
+.planner-topbar .tabs > .create-menu > button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: calc(var(--control-size) - 4px);
+  min-height: calc(var(--control-size) - 4px);
+  padding: 0 10px;
+  border-radius: 7px;
+}
+.planner-topbar .tabs > .create-menu > button {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+}
+.planner-topbar .tabs > .create-menu > button:hover {
+  background: var(--accent-soft);
+  color: var(--accent-hover);
+}
+.planner-topbar .tabs a.active {
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: 0 1px 3px rgb(20 30 40 / 8%);
+}
+.planner-topbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--size-3);
+  min-width: 0;
+}
+.planner-topbar-actions:empty {
+  display: none;
 }
 .planner-search {
   display: flex;
   flex: 1;
   min-width: 0;
   position: relative;
-  max-width: 320px;
-  margin-left: auto;
+  max-width: 260px;
+  margin: 0;
 }
 .planner-search input[type="search"] {
   min-width: 0;
-  border-color: var(--border);
-  padding-left: var(--size-8);
-  background: var(--surface);
+  height: var(--control-size);
+  padding: 4px 10px 4px var(--control-size);
+  background: var(--canvas);
   font-size: var(--font-size-small);
 }
 .search-button {
@@ -861,11 +904,9 @@ footer {
   border-color: transparent;
   color: var(--accent);
 }
-.planner-topbar > .create-menu {
+.planner-topbar-actions > .create-menu {
   margin-left: 0;
-}
-.planner-topbar .tabs {
-  margin-right: auto;
+  flex-shrink: 0;
 }
 .card {
   background: var(--surface);
@@ -1884,6 +1925,11 @@ html:has(dialog:modal) {
   }
 }
 /* Open Props --size-sm and --size-md; native media queries cannot use var(). */
+@media (max-width: 1024px) {
+  .planner-topbar {
+    gap: var(--size-3);
+  }
+}
 @media (max-width: 480px) {
   .form-dialog {
     width: calc(100% - var(--size-3));
@@ -1893,22 +1939,23 @@ html:has(dialog:modal) {
 }
 @media (max-width: 768px) {
   .planner-topbar .tabs {
-    flex: 1;
+    grid-column: 1 / -1;
+    grid-row: 1;
     min-width: 0;
   }
   .planner-search {
-    order: 1;
-    flex-basis: 100%;
     max-width: none;
   }
   .planner-topbar {
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--size-3);
-    padding: var(--size-3);
+    padding: 8px 12px;
   }
   .planner-content {
     padding: var(--size-3);
   }
-  .planner-topbar .tabs a {
+  .planner-topbar .tabs > a {
+    flex: 1;
     padding-inline: var(--size-2);
   }
   .log-card:not(.compact) {

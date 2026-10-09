@@ -44,6 +44,12 @@ describe("planner layout", () => {
 
       expect(page).toContain(`class="planner-page planner-view-${view}"`);
       expect(page).toContain('</header><div class="planner-content">');
+      expect(page).not.toContain('class="planner-brand"');
+      expect(page.indexOf('id="import-menu-trigger"')).toBeLessThan(
+        page.indexOf('class="planner-topbar-actions"'),
+      );
+      expect(page).toContain('class="planner-topbar-actions"');
+      expect(page).toContain('aria-label="Planner views"');
     },
   );
 

@@ -1,4 +1,61 @@
 const STEP = 15 * 60 * 1000;
+const duration = (minutes) => {
+  const total = Math.floor(minutes);
+  return `${Math.floor(total / 60)}h ${total % 60}m`;
+};
+const clippedMinutes = (blockStart, now, start, end) =>
+  Math.max(0, Math.min(now, end) - Math.max(blockStart, start)) / 60000;
+
+export const updateLiveTimeline = (root, now = Date.now()) => {
+  const clock = (time) =>
+    new Date(time).toLocaleTimeString("en", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  root.querySelectorAll(".timeline-block.is-running").forEach((block) => {
+    const grid = block.closest(".timeline-scale");
+    const start = Number(grid.dataset.timelineStart);
+    const end = Number(grid.dataset.timelineEnd);
+    const blockStart = Date.parse(block.dataset.blockStart);
+    const visibleStart = Math.min(end, Math.max(blockStart, start));
+    const visibleEnd = Math.max(visibleStart, Math.min(now, end));
+    const minutes = clippedMinutes(
+      blockStart,
+      now,
+      Number(grid.dataset.dayStart),
+      Number(grid.dataset.dayEnd),
+    );
+    block.style.top = `${((visibleStart - start) / (end - start)) * 100}%`;
+    block.style.height = `${((visibleEnd - visibleStart) / (end - start)) * 100}%`;
+    block.classList.toggle("is-short", minutes < 35);
+    block.querySelector(".timeline-block-duration").textContent =
+      `${duration(minutes)} · Running`;
+    block.title = `${block.dataset.blockName}: ${clock(blockStart)} – now · ${duration(minutes)}${block.dataset.blockNotes ? ` · ${block.dataset.blockNotes}` : ""}`;
+  });
+  root.querySelectorAll(".timeline-now").forEach((marker) => {
+    const grid = marker.closest(".timeline-scale");
+    const start = Number(grid.dataset.timelineStart);
+    const end = Number(grid.dataset.timelineEnd);
+    marker.hidden = now < start || now >= end;
+    if (marker.hidden) return;
+    marker.style.top = `${((now - start) / (end - start)) * 100}%`;
+    marker.querySelector("span").textContent = clock(now);
+    marker.setAttribute("aria-label", `Current time ${clock(now)}`);
+  });
+  root
+    .querySelectorAll(".timeline-tracked-total[data-running-start]")
+    .forEach((summary) => {
+      const minutes =
+        Number(summary.dataset.trackedMinutes) +
+        clippedMinutes(
+          Date.parse(summary.dataset.runningStart),
+          now,
+          Number(summary.dataset.dayStart),
+          Number(summary.dataset.dayEnd),
+        );
+      summary.textContent = `${duration(minutes)} tracked`;
+    });
+};
 
 // Grid origins are server-provided instants, so day changes remain correct at DST.
 export const adjustRange = ({
@@ -27,6 +84,18 @@ export const adjustRange = ({
 
 const initialize = () => {
   document.documentElement.classList.add("timeline-enhanced");
+  const tick = () => updateLiveTimeline(document);
+  tick();
+  let interval = setInterval(tick, 1000);
+  document.addEventListener("visibilitychange", tick);
+  window.addEventListener("pagehide", () => {
+    clearInterval(interval);
+    interval = undefined;
+  });
+  window.addEventListener("pageshow", () => {
+    tick();
+    interval ??= setInterval(tick, 1000);
+  });
   let drag;
   let pending;
   let suppressClickUntil = 0;

@@ -23,7 +23,17 @@ export const TimeTrackedSummary = ({
   now?: number;
 }) => (
   <div class="timeline-section-heading">
-    <span>
+    <span
+      class="timeline-tracked-total"
+      data-day-start={dayRange(day).start}
+      data-day-end={dayRange(day).end}
+      data-tracked-minutes={blocks
+        .filter((block) => block.endTime !== null)
+        .reduce((sum, block) => sum + blockMinutes(block, day, now), 0)}
+      data-running-start={
+        blocks.find((block) => block.endTime === null)?.startTime
+      }
+    >
       {duration(
         blocks.reduce((sum, block) => sum + blockMinutes(block, day, now), 0),
       )}{" "}
@@ -96,6 +106,8 @@ export const DayTimeline = ({
         data-timeline-day={day}
         data-timeline-start={start}
         data-timeline-end={end}
+        data-day-start={range.start}
+        data-day-end={range.end}
         style={`--timeline-hours:${window.endHour - window.startHour}`}
         aria-label="Daily time grid"
       >
@@ -147,6 +159,7 @@ export const DayTimeline = ({
               data-block-end={block.endTime}
               data-block-label={block.labelId}
               data-block-notes={block.notes}
+              data-block-name={label?.name ?? "Time"}
               style={`top:${top}%;height:${height}%;--label-color:${label?.color ?? "#15803d"}`}
               title={`${label?.name}: ${clock(block.startTime)} – ${block.endTime ? clock(block.endTime) : "now"} · ${duration(minutes)}${block.notes ? ` · ${block.notes}` : ""}`}
             >
@@ -192,9 +205,10 @@ export const DayTimeline = ({
             </div>
           );
         })}
-        {today && now >= start && now <= end ? (
+        {today ? (
           <div
             class="timeline-now"
+            hidden={now < start || now >= end}
             style={`top:${((now - start) / (end - start)) * 100}%`}
             aria-label={`Current time ${clock(new Date(now).toISOString())}`}
           >

@@ -136,37 +136,39 @@ export const renderDashboard = (
               active={data.view === view}
             />
           ))}
+          <ImportMenu options={options} />
         </nav>
-        {data.view !== "stats" ? (
-          <form
-            class="planner-search"
-            role="search"
-            method="get"
-            action="/workouts"
-          >
-            {Object.entries(options)
-              .filter(([key]) => key !== "search")
-              .map(([key, value]) => (
-                <input type="hidden" name={key} value={value} />
-              ))}
-            <input
-              type="search"
-              name="search"
-              value={options.search}
-              placeholder="Search plans…"
-              aria-label="Search workouts and habits"
-            />
-            <button
-              type="submit"
-              class="search-button"
-              aria-label="Search workouts and habits"
-              title="Search"
+        <div class="planner-topbar-actions">
+          {data.view !== "stats" ? (
+            <form
+              class="planner-search"
+              role="search"
+              method="get"
+              action="/workouts"
             >
-              <Icon name="search" />
-            </button>
-          </form>
-        ) : null}
-        <ImportMenu options={options} />
+              {Object.entries(options)
+                .filter(([key]) => key !== "search")
+                .map(([key, value]) => (
+                  <input type="hidden" name={key} value={value} />
+                ))}
+              <input
+                type="search"
+                name="search"
+                value={options.search}
+                placeholder="Search plans…"
+                aria-label="Search workouts and habits"
+              />
+              <button
+                type="submit"
+                class="search-button"
+                aria-label="Search workouts and habits"
+                title="Search"
+              >
+                <Icon name="search" />
+              </button>
+            </form>
+          ) : null}
+        </div>
       </header>
       <div class="planner-content">
         {form}
