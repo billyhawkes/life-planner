@@ -93,6 +93,9 @@ export const DayTimeline = ({
       ) : null}
       <div
         class="timeline-scale"
+        data-timeline-day={day}
+        data-timeline-start={start}
+        data-timeline-end={end}
         style={`--timeline-hours:${window.endHour - window.startHour}`}
         aria-label="Daily time grid"
       >
@@ -128,33 +131,65 @@ export const DayTimeline = ({
         {visible.map((block) => {
           const label = labels.find((label) => label.id === block.labelId);
           const minutes = blockMinutes(block, day, now);
-          const top =
-            ((Math.max(Date.parse(block.startTime), start) - start) /
-              (end - start)) *
-            100;
-          const height = ((minutes * 60000) / (end - start)) * 100;
+          const visibleStart = Math.max(Date.parse(block.startTime), start);
+          const visibleEnd = Math.min(
+            Date.parse(block.endTime ?? new Date(now).toISOString()),
+            end,
+          );
+          const top = ((visibleStart - start) / (end - start)) * 100;
+          const height = ((visibleEnd - visibleStart) / (end - start)) * 100;
           return (
-            <a
+            <div
               id={`block-${day}-${block.id}`}
               class={`timeline-block ${block.endTime === null ? "is-running" : ""} ${minutes < 35 ? "is-short" : ""}`}
-              href={url(block.id)}
-              data-on:click__prevent={`@get('${url(block.id)}')`}
+              data-block-id={block.id}
+              data-block-start={block.startTime}
+              data-block-end={block.endTime}
+              data-block-label={block.labelId}
+              data-block-notes={block.notes}
               style={`top:${top}%;height:${height}%;--label-color:${label?.color ?? "#15803d"}`}
               title={`${label?.name}: ${clock(block.startTime)} – ${block.endTime ? clock(block.endTime) : "now"} · ${duration(minutes)}${block.notes ? ` · ${block.notes}` : ""}`}
             >
-              <strong>{block.notes || label?.name}</strong>
-              {block.notes ? (
-                <span class="timeline-block-label">{label?.name}</span>
+              <a
+                class="timeline-block-edit"
+                href={url(block.id)}
+                data-on:click__prevent={`@get('${url(block.id)}')`}
+                aria-describedby={`timeline-drag-help-${day}`}
+                draggable="false"
+              >
+                <strong>{block.notes || label?.name}</strong>
+                {block.notes ? (
+                  <span class="timeline-block-label">{label?.name}</span>
+                ) : null}
+                <span class="timeline-block-time">
+                  {clock(block.startTime)} –{" "}
+                  {block.endTime ? clock(block.endTime) : "now"}
+                </span>
+                <span class="timeline-block-duration">
+                  {duration(minutes)}
+                  {block.endTime === null ? " · Running" : ""}
+                </span>
+              </a>
+              {block.endTime !== null &&
+              Date.parse(block.startTime) >= start ? (
+                <button
+                  type="button"
+                  class="timeline-resize timeline-resize-start"
+                  data-resize="start"
+                  aria-label="Adjust block start time"
+                  title="Drag to resize start; use arrow keys for 15-minute steps"
+                />
               ) : null}
-              <span class="timeline-block-time">
-                {clock(block.startTime)} –{" "}
-                {block.endTime ? clock(block.endTime) : "now"}
-              </span>
-              <span class="timeline-block-duration">
-                {duration(minutes)}
-                {block.endTime === null ? " · Running" : ""}
-              </span>
-            </a>
+              {block.endTime !== null && Date.parse(block.endTime) <= end ? (
+                <button
+                  type="button"
+                  class="timeline-resize timeline-resize-end"
+                  data-resize="end"
+                  aria-label="Adjust block end time"
+                  title="Drag to resize end; use arrow keys for 15-minute steps"
+                />
+              ) : null}
+            </div>
           );
         })}
         {today && now >= start && now <= end ? (
@@ -167,6 +202,32 @@ export const DayTimeline = ({
           </div>
         ) : null}
       </div>
+      <p class="sr-only" id={`timeline-drag-help-${day}`}>
+        Click to edit. Drag a completed block to move it, or drag its edges to
+        resize. Use Alt and arrow keys to move by 15 minutes or to an adjacent
+        day.
+      </p>
+      <form
+        class="timeline-update-form"
+        hidden
+        method="post"
+        action="/timeline/blocks"
+        data-on:submit__prevent="@post(el.action, {contentType: 'form'})"
+      >
+        <input type="hidden" name="day" value={day} />
+        {options ? (
+          <>
+            <input type="hidden" name="planner" value="true" />
+            {Object.entries(options).map(([key, value]) => (
+              <input type="hidden" name={key} value={value} />
+            ))}
+          </>
+        ) : null}
+        <input type="hidden" name="labelId" />
+        <input type="hidden" name="startTime" />
+        <input type="hidden" name="endTime" />
+        <input type="hidden" name="notes" />
+      </form>
     </section>
   );
 };

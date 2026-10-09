@@ -64,6 +64,75 @@
   color: var(--text);
   box-shadow: 0 2px 5px rgb(0 0 0 / 9%);
 }
+.timeline-block-edit {
+  display: block;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+.timeline-block-edit:hover {
+  color: inherit;
+}
+.timeline-enhanced .timeline-block[data-block-end] {
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+  min-height: 12px;
+}
+.timeline-enhanced .timeline-block[data-block-end] .timeline-block-edit {
+  cursor: grab;
+}
+.timeline-resize {
+  display: none;
+}
+.timeline-enhanced .timeline-resize {
+  position: absolute;
+  display: block;
+  left: 6px;
+  right: 6px;
+  height: 6px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: inherit;
+  cursor: ns-resize;
+}
+.timeline-resize-start {
+  top: 0;
+}
+.timeline-resize-end {
+  bottom: 0;
+}
+.timeline-enhanced .timeline-resize:hover:not(:disabled),
+.timeline-enhanced .timeline-resize:focus-visible {
+  background: color-mix(in srgb, var(--label-color) 45%, transparent);
+}
+.timeline-block.is-dragging,
+.timeline-block.is-saving {
+  opacity: 0.4;
+}
+.timeline-block.timeline-drag-ghost {
+  pointer-events: none;
+  z-index: 6;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
+}
+.timeline-drag-hint {
+  position: fixed;
+  z-index: 20;
+  pointer-events: none;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--control-radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-2);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+.timeline-update-form[hidden] {
+  display: none;
+}
 .timeline-block strong {
   overflow: hidden;
   text-overflow: ellipsis;

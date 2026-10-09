@@ -21,6 +21,10 @@ declare module "*charts.js" {
   const content: string;
   export default content;
 }
+declare module "*timeline.js" {
+  const content: string;
+  export default content;
+}
 declare module "*pwa.js" {
   const content: string;
   export default content;

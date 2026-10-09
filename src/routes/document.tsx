@@ -1,5 +1,5 @@
 import { html, type Html } from "@/lib/datastar";
-import { stylesUrl } from "@/lib/static-assets";
+import { stylesUrl, timelineUrl } from "@/lib/static-assets";
 
 export const renderDocument = (body: Html) =>
   html`<!doctype html>${(
@@ -18,6 +18,7 @@ export const renderDocument = (body: Html) =>
           <link rel="stylesheet" href={stylesUrl} />
           <script type="module" src="/dialogs.js" />
           <script type="module" src="/charts.js" />
+          <script type="module" src={timelineUrl} />
           <script type="module" src="/datastar.js" />
           {process.env.NODE_ENV === "production" ? (
             <script type="module" src="/pwa.js" />

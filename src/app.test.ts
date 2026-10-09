@@ -58,6 +58,11 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
               );
 
             const root = yield* request("/");
+            const dragScript = yield* request("/timeline.js");
+            expect(dragScript.status).toBe(200);
+            expect(dragScript.headers.get("content-type")).toContain(
+              "text/javascript",
+            );
             const timelinePage = yield* request("/timeline?day=2026-01-01");
             expect(timelinePage.status).toBe(200);
             expect(yield* Effect.promise(() => timelinePage.text())).toContain(
@@ -72,6 +77,24 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
             expect(yield* Effect.promise(() => timelinePatch.text())).toContain(
               'id="goal-form"',
             );
+            for (const datastar of [false, true]) {
+              const hourDialog = yield* request(
+                "/timeline/blocks/new?view=week&planner=true&day=2026-01-01&startTime=2026-01-01T09:00",
+                datastar
+                  ? { headers: { "Datastar-Request": "true" } }
+                  : undefined,
+              );
+              expect(hourDialog.status).toBe(200);
+              const hourDialogHtml = yield* Effect.promise(() =>
+                hourDialog.text(),
+              );
+              expect(hourDialogHtml).toContain(
+                'name="startTime" step="any" value="2026-01-01T09:00"',
+              );
+              expect(hourDialogHtml).toContain(
+                'name="endTime" step="any" value="2026-01-01T10:00:00.000"',
+              );
+            }
             const timeLabelName = `time-http-${crypto.randomUUID()}`;
             yield* Effect.addFinalizer(() =>
               Effect.gen(function* () {
@@ -160,6 +183,42 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
               1,
             );
             expect(nativeBlockHtml).toContain('<dialog id="time-block-dialog"');
+            for (const [startTime, endTime] of [
+              ["2019-01-02T14:15:00.000Z", "2019-01-02T15:15:00.000Z"],
+              ["2019-01-02T14:15:00.000Z", "2019-01-02T15:45:00.000Z"],
+            ]) {
+              const dragResponse = yield* request(
+                `/timeline/blocks/${persistedBlock.id}`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "Datastar-Request": "true",
+                  },
+                  body: new URLSearchParams({
+                    labelId: timeLabel.id,
+                    startTime,
+                    endTime,
+                    notes: "Preserved drag notes",
+                    planner: "true",
+                    view: "week",
+                    day: "2019-01-02",
+                  }),
+                },
+              );
+              expect(dragResponse.headers.get("content-type")).toContain(
+                "text/event-stream",
+              );
+              expect(
+                yield* Effect.promise(() => dragResponse.text()),
+              ).not.toContain('<dialog id="time-block-dialog"');
+              const movedBlock = (yield* timeline.listBlocks({})).find(
+                (block) => block.id === persistedBlock.id,
+              )!;
+              expect(movedBlock.startTime).toBe(startTime);
+              expect(movedBlock.endTime).toBe(endTime);
+              expect(movedBlock.notes).toBe("Preserved drag notes");
+            }
             const invalidBlockResponse = yield* request(
               `/timeline/blocks/${persistedBlock.id}`,
               {

@@ -7,7 +7,7 @@ import { readFile } from "node:fs/promises";
 import { AppApi } from "@/api";
 import { DatabaseLive } from "@/db";
 import { mcpLayer } from "@/lib/mcp-handler";
-import { styles } from "@/lib/static-assets";
+import { styles, timeline as timelineScript } from "@/lib/static-assets";
 import { Workouts } from "@/services/workouts";
 import { workoutsHandler } from "@/services/workouts/api.builder";
 import { Habits } from "@/services/habits";
@@ -76,6 +76,11 @@ export const applicationRoutes = Layer.mergeAll(
     HttpServerResponse.text(dialogs, { contentType: "text/javascript" }),
   ),
   HttpRouter.add("GET", "/api/health", ready),
+  HttpRouter.add(
+    "GET",
+    "/timeline.js",
+    HttpServerResponse.text(timelineScript, { contentType: "text/javascript" }),
+  ),
   HttpRouter.add(
     "GET",
     "/charts.js",

@@ -58,15 +58,20 @@ export class Timeline extends Context.Service<Timeline>()("Timeline", {
         protect(
           sql.withTransaction(
             Effect.gen(function* () {
-              const payload = yield* Schema.decodeUnknownEffect(BlockPayload)(
+              const decoded = yield* Schema.decodeUnknownEffect(BlockPayload)(
                 input.payload,
               );
+              // Interpret datetime-local values exactly as the rendered calendar
+              // does, then send explicit instants instead of relying on the DB timezone.
+              const payload = {
+                ...decoded,
+                startTime: new Date(decoded.startTime).toISOString(),
+                endTime:
+                  decoded.endTime === null
+                    ? null
+                    : new Date(decoded.endTime).toISOString(),
+              };
               yield* lock;
-              if (
-                Date.parse(payload.startTime) > Date.now() ||
-                (payload.endTime && Date.parse(payload.endTime) > Date.now())
-              )
-                return yield* fail("Time blocks cannot be in the future.");
               const labels =
                 yield* sql`SELECT id FROM time_labels WHERE id = ${payload.labelId}`;
               if (!labels.length)

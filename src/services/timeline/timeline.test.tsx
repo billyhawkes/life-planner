@@ -12,6 +12,7 @@ import {
   weekDays,
   weeklyMinutes,
   timelineWindow,
+  blockDateTime,
 } from "./helpers";
 import { DayTimeline } from "./components/day";
 import { BlockForm } from "./components/block-form";
@@ -22,6 +23,56 @@ import { dateKey } from "@/services/workouts/helpers";
 import { decodeBlockForm, decodeLabelForm } from "./schema";
 
 describe("timeline presentation and validation", () => {
+  it("prefills clicked hours on both dialog and native page opens", () => {
+    for (const operation of [undefined, "block"]) {
+      const dialog = BlockForm({
+        labels: [],
+        blocks: [],
+        values: {
+          day: "2099-01-01",
+          startTime: "2099-01-01T23:00",
+          ...(operation ? { operation } : {}),
+        },
+      }).value;
+      expect(dialog).toContain(
+        'name="startTime" step="any" value="2099-01-01T23:00"',
+      );
+      expect(dialog).toContain(
+        'name="endTime" step="any" value="2099-01-02T00:00:00.000"',
+      );
+    }
+  });
+
+  it("preserves submitted values after a block validation error", () => {
+    const dialog = BlockForm({
+      labels: [],
+      blocks: [],
+      values: {
+        day: "2026-01-01",
+        operation: "block",
+        startTime: "2026-01-01T09:15",
+        endTime: "2026-01-01T09:10",
+        notes: "Keep these notes",
+      },
+      error: "End must be after start.",
+    }).value;
+    expect(dialog).toContain('value="2026-01-01T09:15"');
+    expect(dialog).toContain('value="2026-01-01T09:10"');
+    expect(dialog).toContain("Keep these notes");
+  });
+  it("shows rejected UTC drag values as editable local datetimes", () => {
+    const startTime = "2026-01-01T14:00:00.000Z";
+    const endTime = "2026-01-01T15:00:00.000Z";
+    const dialog = BlockForm({
+      labels: [],
+      blocks: [],
+      error: "This block overlaps another block.",
+      values: { day: "2026-01-01", operation: "block", startTime, endTime },
+    }).value;
+    expect(dialog).toContain(`value="${blockDateTime(startTime)}"`);
+    expect(dialog).toContain(`value="${blockDateTime(endTime)}"`);
+    expect(dialog).not.toContain(`value="${startTime}"`);
+  });
   it("keeps start and stop controls in the Time dialog instead of the plus menu", () => {
     const labels = [
       {
@@ -204,6 +255,10 @@ describe("timeline presentation and validation", () => {
     expect(html).toContain("edit=focus");
     expect(html).toContain("startTime=2026-01-01T09:00");
     expect(html).toContain("Deep work</strong>");
+    expect(html).toContain('data-block-id="focus"');
+    expect(html).toContain('data-resize="start"');
+    expect(html).toContain('data-resize="end"');
+    expect(html).toContain('class="timeline-update-form" hidden');
     expect(html).not.toContain("timeline-entries");
     const form = BlockForm({
       labels,
@@ -436,6 +491,71 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
             const label = (yield* timeline.listLabels({})).find(
               (row) => row.name === name,
             )!;
+            const localPayload = {
+              labelId: label.id,
+              startTime: "2019-01-02T09:00:00",
+              endTime: "2019-01-02T10:00:00",
+              notes: "Local time round trip",
+            };
+            yield* sql.withTransaction(
+              Effect.gen(function* () {
+                yield* sql`SET LOCAL TIME ZONE 'Pacific/Honolulu'`;
+                yield* timeline.saveBlock({ payload: localPayload });
+              }),
+            );
+            const localBlock = (yield* timeline.listBlocks({})).find(
+              (row) => row.labelId === label.id,
+            )!;
+            expect(localBlock.startTime).toBe(
+              new Date(localPayload.startTime).toISOString(),
+            );
+            expect(localBlock.endTime).toBe(
+              new Date(localPayload.endTime).toISOString(),
+            );
+
+            yield* sql.withTransaction(
+              Effect.gen(function* () {
+                yield* sql`SET LOCAL TIME ZONE 'Pacific/Honolulu'`;
+                yield* timeline.saveBlock({
+                  id: localBlock.id,
+                  payload: {
+                    ...localPayload,
+                    startTime: "2019-02-02T09:00:00-05:00",
+                    endTime: "2019-02-02T10:00:00-05:00",
+                  },
+                });
+              }),
+            );
+            const editedLocalBlock = (yield* timeline.listBlocks({})).find(
+              (row) => row.id === localBlock.id,
+            )!;
+            expect(editedLocalBlock.startTime).toBe("2019-02-02T14:00:00.000Z");
+            expect(editedLocalBlock.endTime).toBe("2019-02-02T15:00:00.000Z");
+            yield* timeline.saveBlock({
+              id: localBlock.id,
+              payload: {
+                ...localPayload,
+                startTime: "2099-01-01T09:00:00Z",
+                endTime: "2099-01-01T10:30:00Z",
+              },
+            });
+            const futureBlock = (yield* timeline.listBlocks({})).find(
+              (row) => row.id === localBlock.id,
+            )!;
+            expect(futureBlock.startTime).toBe("2099-01-01T09:00:00.000Z");
+            expect(futureBlock.endTime).toBe("2099-01-01T10:30:00.000Z");
+            expect(
+              (yield* timeline
+                .saveBlock({
+                  payload: {
+                    ...localPayload,
+                    startTime: "2099-01-01T10:00:00Z",
+                    endTime: "2099-01-01T11:00:00Z",
+                  },
+                })
+                .pipe(Effect.result))._tag,
+            ).toBe("Failure");
+            yield* timeline.removeBlock({ id: localBlock.id });
             const payload = {
               labelId: label.id,
               startTime: "2020-01-01T09:00:00Z",

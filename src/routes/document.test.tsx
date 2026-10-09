@@ -1,10 +1,16 @@
 import { describe, expect, it } from "bun:test";
 
 import { html } from "@/lib/datastar";
-import { stylesUrl } from "@/lib/static-assets";
+import { stylesUrl, timelineUrl } from "@/lib/static-assets";
 import { renderDocument } from "./document";
 
 describe("renderDocument", () => {
+  it("loads fingerprinted calendar drag interactions", () => {
+    expect(timelineUrl).toMatch(/^\/timeline\.js\?v=[a-z0-9]+$/);
+    expect(renderDocument(html`<main>Planner</main>`).value).toContain(
+      `src="${timelineUrl}"`,
+    );
+  });
   it("fingerprints the application stylesheet", () => {
     const document = renderDocument(html`<main>Planner</main>`).value;
 

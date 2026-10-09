@@ -9,6 +9,13 @@ import type { TimeBlock, TimeLabel } from "../schema";
 import { LabelSelect, TimeForm } from "./forms";
 import { TimerControls } from "./timer";
 
+const localInputValue = (value?: string) =>
+  value &&
+  /(?:Z|[+-]\d{2}:\d{2})$/.test(value) &&
+  Number.isFinite(Date.parse(value))
+    ? blockDateTime(value)
+    : value;
+
 export const BlockForm = ({
   labels,
   blocks,
@@ -26,23 +33,28 @@ export const BlockForm = ({
     (entry) => entry.id === (values.editBlock ?? values.edit),
   );
   const day = selectedDay(values.day);
-  const retry = values.operation === "block";
+  const retry = values.operation === "block" && error !== undefined;
   const action = block ? `/timeline/blocks/${block.id}` : "/timeline/blocks";
   const closeUrl =
     values.planner === "true" ? viewUrl(options) : `/timeline?day=${day}`;
-  const start =
+  const requestedStart =
     values.startTime && Number.isFinite(Date.parse(values.startTime))
-      ? values.startTime
-      : day === dateKey(new Date())
-        ? blockDateTime(
-            new Date(
-              Math.floor(Date.now() / 60000) * 60000 - 30 * 60000,
-            ).toISOString(),
-          )
-        : `${day}T09:00`;
+      ? localInputValue(values.startTime)
+      : undefined;
+  const start = requestedStart
+    ? requestedStart
+    : day === dateKey(new Date())
+      ? blockDateTime(
+          new Date(
+            Math.floor(Date.now() / 60000) * 60000 - 30 * 60000,
+          ).toISOString(),
+        )
+      : `${day}T09:00`;
   const defaultEnd = blockDateTime(
     new Date(
-      Math.min(Date.parse(start) + 60 * 60000, Date.now()),
+      requestedStart
+        ? Date.parse(start) + 60 * 60000
+        : Math.min(Date.parse(start) + 60 * 60000, Date.now()),
     ).toISOString(),
   );
   return (
@@ -116,7 +128,7 @@ export const BlockForm = ({
                 step="any"
                 value={
                   retry
-                    ? values.startTime
+                    ? localInputValue(values.startTime)
                     : block
                       ? blockDateTime(block.startTime)
                       : start
@@ -132,7 +144,7 @@ export const BlockForm = ({
                 step="any"
                 value={
                   retry
-                    ? values.endTime
+                    ? localInputValue(values.endTime)
                     : block
                       ? block.endTime
                         ? blockDateTime(block.endTime)
