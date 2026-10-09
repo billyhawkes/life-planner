@@ -11,6 +11,7 @@ import { Workouts } from "@/services/workouts";
 import { Habits } from "@/services/habits";
 import { Timeline } from "@/services/timeline";
 import { TimeBlock, TimeLabel } from "@/services/timeline/schema";
+import { dayRange, weekDays } from "@/services/timeline/helpers";
 import { WorkoutImportResult } from "@/services/workouts/schema";
 import { dateKey, localDateTime } from "@/services/workouts/helpers";
 
@@ -195,6 +196,66 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
               endTime: "2018-01-01T10:00:00-05:00",
               notes: "JSON API test",
             };
+            yield* timeline.saveLabel({
+              id: apiLabel.id,
+              payload: {
+                ...labelPayload,
+                goalType: "maximum",
+                goalMinutes: 0,
+                weeklyGoalMinutes: 1,
+              },
+            });
+            const currentDay = dateKey(new Date());
+            const weekStart = dayRange(weekDays(currentDay)[0]!).start;
+            yield* timeline.saveBlock({
+              payload: {
+                labelId: apiLabel.id,
+                startTime: new Date(weekStart).toISOString(),
+                endTime: new Date(weekStart + 60000).toISOString(),
+                notes: "Maximum warning test",
+              },
+            });
+            for (const datastar of [false, true]) {
+              const warning = yield* request("/timeline/start", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/x-www-form-urlencoded",
+                  ...(datastar ? { "Datastar-Request": "true" } : {}),
+                },
+                body: new URLSearchParams({
+                  labelId: apiLabel.id,
+                  day: currentDay,
+                  planner: "true",
+                  view: "today",
+                }),
+              });
+              expect(warning.status).toBe(datastar ? 200 : 400);
+              const warningHtml = yield* Effect.promise(() => warning.text());
+              expect(warningHtml).toContain("weekly maximum");
+              expect(warningHtml).toContain("Start anyway");
+              expect(warningHtml).toContain(
+                'name="confirmMaximum" value="true"',
+              );
+            }
+            const confirmed = yield* request("/timeline/start", {
+              method: "POST",
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              body: new URLSearchParams({
+                labelId: apiLabel.id,
+                confirmMaximum: "true",
+                day: currentDay,
+              }),
+            });
+            expect(confirmed.status).toBe(303);
+            const confirmedBlock = (yield* timeline.listBlocks({})).find(
+              (block) =>
+                block.labelId === apiLabel.id && block.endTime === null,
+            )!;
+            yield* timeline.stop({ id: confirmedBlock.id });
+            yield* timeline.saveLabel({
+              id: apiLabel.id,
+              payload: { ...labelPayload, goalMinutes: 120 },
+            });
             const createApiBlock = (payload: typeof apiBlock) =>
               request("/api/timeline/blocks", {
                 method: "POST",
@@ -493,7 +554,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
             );
             expect(statsHtml).toContain('class="stats-page"');
             expect(statsHtml).toContain('class="stats tracking-goal-list"');
-            expect(statsHtml).toContain("of 40h 0m weekly goal");
+            expect(statsHtml).toContain("of 40h 0m weekly minimum");
             expect(statsHtml).toContain("/timeline/goals/new?view=stats");
             expect(statsHtml).not.toContain("All workouts");
             const formPage = yield* request("/workouts?view=week&new=true", {
@@ -532,7 +593,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
             const serviceWorker = yield* request("/service-worker.js");
             expect(serviceWorker.headers.get("cache-control")).toBe("no-cache");
             expect(yield* Effect.promise(() => serviceWorker.text())).toContain(
-              'const CACHE_NAME = "life-planner-v1"',
+              'const CACHE_NAME = "life-planner-v2"',
             );
             const icon = yield* request("/icon-192.png");
             expect(icon.status).toBe(200);

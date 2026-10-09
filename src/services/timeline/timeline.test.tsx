@@ -13,6 +13,7 @@ import {
   weeklyMinutes,
   timelineWindow,
   blockDateTime,
+  maximumWarning,
 } from "./helpers";
 import { DayTimeline } from "./components/day";
 import { BlockForm } from "./components/block-form";
@@ -23,6 +24,101 @@ import { dateKey } from "@/services/workouts/helpers";
 import { decodeBlockForm, decodeLabelForm } from "./schema";
 
 describe("timeline presentation and validation", () => {
+  it("warns at daily and weekly maximums, but not minimums or unset targets", () => {
+    const now = new Date("2026-01-08T12:00:00").getTime();
+    const label = {
+      id: "work",
+      name: "Work",
+      goalType: "maximum" as const,
+      goalMinutes: 60,
+      weeklyGoalMinutes: 120,
+      color: "#15803d",
+    };
+    const blocks = [
+      {
+        id: "today",
+        labelId: "work",
+        startTime: new Date("2026-01-08T11:00:00").toISOString(),
+        endTime: null,
+        notes: "",
+      },
+    ];
+    expect(maximumWarning(label, blocks, now)).toContain("daily maximum");
+    expect(maximumWarning(label, blocks, now - 1)).toBeUndefined();
+    const previous = {
+      ...blocks[0]!,
+      id: "previous",
+      startTime: new Date("2026-01-07T11:00:00").toISOString(),
+      endTime: new Date("2026-01-07T12:00:00").toISOString(),
+    };
+    expect(maximumWarning(label, [...blocks, previous], now)).toContain(
+      "daily and weekly maximum",
+    );
+    expect(
+      maximumWarning({ ...label, goalMinutes: 0 }, [...blocks, previous], now),
+    ).toContain("weekly maximum");
+    expect(
+      maximumWarning(
+        { ...label, goalType: "minimum" },
+        [...blocks, previous],
+        now,
+      ),
+    ).toBeUndefined();
+    expect(
+      maximumWarning(
+        { ...label, goalMinutes: 0, weeklyGoalMinutes: 0 },
+        blocks,
+        now,
+      ),
+    ).toBeUndefined();
+    expect(
+      maximumWarning(label, [{ ...previous, labelId: "hobby" }], now),
+    ).toBeUndefined();
+  });
+  it("renders an explicit start-anyway confirmation for maximum warnings", () => {
+    const html = TrackingControls({
+      labels: [],
+      blocks: [],
+      day: "2026-01-08",
+      error: "Work has reached its daily maximum.",
+      values: { operation: "start", confirmStart: "true", labelId: "work" },
+    }).value;
+    expect(html).toContain('role="alert"');
+    expect(html).toContain(
+      '<dialog id="maximum-warning-dialog" class="form-dialog" open',
+    );
+    expect(html).toContain('role="alertdialog"');
+    expect(html).toContain('aria-labelledby="maximum-warning-title"');
+    expect(html).toContain('aria-describedby="maximum-warning-message"');
+    expect(html).toContain('data-dialog-close=""');
+    expect(html).toContain('action="/timeline/start"');
+    expect(html).toContain('name="confirmMaximum" value="true"');
+    expect(html).toContain('name="labelId" value="work"');
+    expect(html).toContain("Start anyway");
+    expect(html).toContain("Cancel");
+  });
+  it("validates minimum and maximum goal types", async () => {
+    for (const goalType of ["minimum", "maximum"] as const) {
+      const payload = await Effect.runPromise(
+        decodeLabelForm({
+          name: "Goal",
+          goalType,
+          goalMinutes: "60",
+          color: "#15803d",
+        }),
+      );
+      expect(payload.goalType).toBe(goalType);
+    }
+    const result = await Effect.runPromise(
+      decodeLabelForm({
+        name: "Goal",
+        goalType: "other",
+        goalMinutes: "60",
+        color: "#15803d",
+      }).pipe(Effect.result),
+    );
+    expect(result._tag).toBe("Failure");
+  });
   it("prefills clicked hours on both dialog and native page opens", () => {
     for (const operation of [undefined, "block"]) {
       const dialog = BlockForm({
@@ -78,6 +174,7 @@ describe("timeline presentation and validation", () => {
       {
         id: "work",
         name: "Work",
+        goalType: "maximum" as const,
         goalMinutes: 0,
         weeklyGoalMinutes: 2400,
         color: "#15803d",
@@ -182,6 +279,7 @@ describe("timeline presentation and validation", () => {
         {
           id: "work",
           name: "Work",
+          goalType: "maximum",
           goalMinutes: 60,
           weeklyGoalMinutes: 2400,
           color: "#15803d",
@@ -200,10 +298,15 @@ describe("timeline presentation and validation", () => {
       options: readOptions({ view: "week" }),
     }).value;
     expect(html).toContain('class="stats tracking-goal-list"');
-    expect(html).toContain('<article class="card timeline-goal">');
+    expect(html).toContain(
+      '<article class="card timeline-goal is-over-maximum">',
+    );
     expect(html).toContain("<strong>2h 0m</strong>");
-    expect(html).toContain("of 40h 0m weekly goal");
+    expect(html).toContain("of 40h 0m weekly maximum");
     expect(html).toContain("Daily: 2h 0m / 1h 0m");
+    expect(html).toContain("5%</span>");
+    expect(html).toContain("200%</span>");
+    expect(html).toContain("1h 0m over maximum");
     expect(html).toContain("/timeline/goals/new?view=week");
   });
   it("uses shared daytime hours without hiding early or overnight entries", () => {
@@ -227,11 +330,69 @@ describe("timeline presentation and validation", () => {
       endHour: 22,
     });
   });
+  it("shows uncapped percentages and only marks maximums red when exceeded", () => {
+    for (const goalType of ["minimum", "maximum"] as const) {
+      for (const minutes of [30, 60, 90]) {
+        const html = TrackingControls({
+          labels: [
+            {
+              id: "goal",
+              name: "Goal",
+              goalType,
+              goalMinutes: 60,
+              weeklyGoalMinutes: 0,
+              color: "#15803d",
+            },
+          ],
+          blocks: [
+            {
+              id: "session",
+              labelId: "goal",
+              startTime: new Date("2026-01-01T09:00").toISOString(),
+              endTime: new Date(
+                new Date("2026-01-01T09:00").getTime() + minutes * 60000,
+              ).toISOString(),
+              notes: "",
+            },
+          ],
+          day: "2026-01-01",
+        }).value;
+        expect(html).toContain(`${(minutes / 60) * 100}%</span>`);
+        expect(html.includes("is-over-maximum")).toBe(
+          goalType === "maximum" && minutes > 60,
+        );
+        if (goalType === "maximum" && minutes > 60)
+          expect(html).toContain("0h 30m over maximum");
+        if (goalType === "maximum" && minutes === 60)
+          expect(html).toContain("Maximum reached");
+        if (goalType === "minimum" && minutes >= 60)
+          expect(html).toContain("Minimum met");
+      }
+    }
+    const noTarget = TrackingControls({
+      labels: [
+        {
+          id: "goal",
+          name: "Goal",
+          goalType: "maximum",
+          goalMinutes: 0,
+          weeklyGoalMinutes: 0,
+          color: "#15803d",
+        },
+      ],
+      blocks: [],
+      day: "2026-01-01",
+    }).value;
+    expect(noTarget).not.toContain("timeline-goal-percentage");
+    expect(noTarget).not.toContain("is-over-maximum");
+    expect(noTarget).toContain("tracked today");
+  });
   it("opens editors from blocks and empty slots rather than duplicating entry lists", () => {
     const labels = [
       {
         id: "work",
         name: "Work",
+        goalType: "maximum" as const,
         goalMinutes: 0,
         weeklyGoalMinutes: 2400,
         color: "#15803d",
@@ -282,6 +443,7 @@ describe("timeline presentation and validation", () => {
       ),
     ).toEqual({
       name: "Guitar",
+      goalType: "minimum",
       goalMinutes: 30,
       weeklyGoalMinutes: 0,
       color: "#15803d",
@@ -388,6 +550,7 @@ describe("timeline presentation and validation", () => {
       {
         id: "work",
         name: "Work",
+        goalType: "maximum" as const,
         goalMinutes: 0,
         weeklyGoalMinutes: 2400,
         color: "#15803d",
@@ -440,6 +603,7 @@ describe("timeline presentation and validation", () => {
         {
           id: "work",
           name: "<Work>",
+          goalType: "maximum",
           goalMinutes: 480,
           weeklyGoalMinutes: 2400,
           color: "#15803d",
@@ -609,6 +773,50 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
                 (row) => row.endTime === null,
               ),
             ).toHaveLength(0);
+            yield* timeline.saveLabel({
+              id: label.id,
+              payload: {
+                name,
+                goalType: "maximum",
+                goalMinutes: 0,
+                weeklyGoalMinutes: 1,
+                color: "#123456",
+              },
+            });
+            expect(
+              (yield* timeline.listLabels({})).find(
+                (row) => row.id === label.id,
+              )?.goalType,
+            ).toBe("maximum");
+            const now = Date.now();
+            // Keep this block in the current Monday–Sunday week even near midnight.
+            const weekStart = dayRange(
+              weekDays(dateKey(new Date(now)))[0]!,
+            ).start;
+            yield* timeline.saveBlock({
+              payload: {
+                labelId: label.id,
+                startTime: new Date(weekStart).toISOString(),
+                endTime: new Date(weekStart + 60000).toISOString(),
+                notes: "Maximum reached",
+              },
+            });
+            const rejected = yield* timeline
+              .start({ labelId: label.id })
+              .pipe(Effect.result);
+            expect(rejected._tag).toBe("Failure");
+            if (rejected._tag === "Failure")
+              expect(rejected.failure.maximumReached).toBe(true);
+            expect(
+              (yield* timeline.listBlocks({})).filter(
+                (row) => row.endTime === null,
+              ),
+            ).toHaveLength(0);
+            yield* timeline.start({ labelId: label.id, confirmMaximum: true });
+            const override = (yield* timeline.listBlocks({})).find(
+              (row) => row.endTime === null,
+            )!;
+            yield* timeline.stop({ id: override.id });
             yield* timeline.removeBlock({ id: block.id });
             expect(
               (yield* timeline.listBlocks({})).some(

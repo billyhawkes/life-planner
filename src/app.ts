@@ -21,6 +21,7 @@ import charts from "../public/charts.js" with { type: "text" };
 import icon180 from "../public/icon-180.png" with { type: "file" };
 import icon192 from "../public/icon-192.png" with { type: "file" };
 import icon512 from "../public/icon-512.png" with { type: "file" };
+import iconSvg from "../public/icon.svg" with { type: "text" };
 import manifest from "../public/manifest.webmanifest" with { type: "text" };
 import pwa from "../public/pwa.js" with { type: "text" };
 import serviceWorker from "../public/service-worker.js" with { type: "text" };
@@ -76,6 +77,11 @@ export const applicationRoutes = Layer.mergeAll(
     HttpServerResponse.text(dialogs, { contentType: "text/javascript" }),
   ),
   HttpRouter.add("GET", "/api/health", ready),
+  HttpRouter.add(
+    "GET",
+    "/icon.svg",
+    HttpServerResponse.text(iconSvg, { contentType: "image/svg+xml" }),
+  ),
   HttpRouter.add(
     "GET",
     "/timeline.js",

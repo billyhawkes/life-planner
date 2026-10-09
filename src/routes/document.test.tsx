@@ -26,6 +26,15 @@ describe("renderDocument", () => {
     expect(document).toContain('name="theme-color" content="#15803d"');
   });
 
+  it("uses the existing app icon as the favicon", () => {
+    expect(renderDocument(html`<main>Planner</main>`).value).toContain(
+      'rel="icon" type="image/svg+xml" href="/icon.svg"',
+    );
+    expect(renderDocument(html`<main>Planner</main>`).value).toContain(
+      'rel="icon" type="image/png" sizes="192x192" href="/icon-192.png"',
+    );
+  });
+
   it("registers the service worker only in production", () => {
     const previous = process.env.NODE_ENV;
     try {

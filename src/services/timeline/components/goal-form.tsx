@@ -35,7 +35,7 @@ export const GoalForm = ({
             <h2 id="goal-form-title">
               {selected ? "Edit goal" : "Create goal"}
             </h2>
-            <p>Set daily or weekly time targets for a label.</p>
+            <p>Set daily or weekly minimums or maximums for a label.</p>
           </div>
           <a
             class="dialog-close"
@@ -63,6 +63,27 @@ export const GoalForm = ({
                 maxlength="100"
                 autofocus
               />
+            </label>
+            <label class="wide">
+              Goal type
+              <select name="goalType" required>
+                <option
+                  value="minimum"
+                  selected={
+                    (retry ? values.goalType : selected?.goalType) !== "maximum"
+                  }
+                >
+                  Minimum — aim for at least this much
+                </option>
+                <option
+                  value="maximum"
+                  selected={
+                    (retry ? values.goalType : selected?.goalType) === "maximum"
+                  }
+                >
+                  Maximum — stay within this limit
+                </option>
+              </select>
             </label>
             <label>
               Daily goal (minutes)
@@ -103,7 +124,7 @@ export const GoalForm = ({
           </div>
           <p>
             Weeks run Monday–Sunday. Use 0 for no target. A 40-hour work week is
-            2400 weekly minutes.
+            2400 weekly minutes. Use minimums for hobbies and maximums for work.
           </p>
           <button type="submit">
             {selected ? "Save goal" : "Create goal"}

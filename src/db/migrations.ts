@@ -103,6 +103,12 @@ const weeklyTimeGoals = Effect.gen(function* () {
   yield* sql`ALTER TABLE time_labels ADD COLUMN weekly_goal_minutes INTEGER NOT NULL DEFAULT 0 CHECK (weekly_goal_minutes BETWEEN 0 AND 10080)`;
 });
 
+const timeGoalTypes = Effect.gen(function* () {
+  const sql = yield* SqlClient.SqlClient;
+  yield* sql`ALTER TABLE time_labels ADD COLUMN goal_type TEXT NOT NULL DEFAULT 'minimum' CHECK (goal_type IN ('minimum', 'maximum'))`;
+  yield* sql`UPDATE time_labels SET goal_type = 'maximum' WHERE lower(trim(name)) = 'work'`;
+});
+
 export const migrate = Migrator.make({})({
   loader: Migrator.fromRecord({
     "001_workouts": initial,
@@ -112,5 +118,6 @@ export const migrate = Migrator.make({})({
     "005_remove_sparkles_habit_icon": removeSparklesHabitIcon,
     "006_timeline": timeline,
     "007_weekly_time_goals": weeklyTimeGoals,
+    "008_time_goal_types": timeGoalTypes,
   }),
 });

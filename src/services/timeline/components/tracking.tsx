@@ -7,6 +7,7 @@ import { blockMinutes, duration, weeklyMinutes } from "../helpers";
 import type { TimeBlock, TimeLabel } from "../schema";
 import { GoalForm } from "./goal-form";
 import { BlockForm } from "./block-form";
+import { TimeForm } from "./forms";
 
 export const TrackingControls = ({
   labels,
@@ -26,21 +27,52 @@ export const TrackingControls = ({
   showGoals?: boolean;
 }) => {
   const now = Date.now();
+  const confirmStart =
+    values.operation === "start" && values.confirmStart === "true";
+  const closeUrl = options ? viewUrl(options) : `/timeline?day=${day}`;
+  const percentage = (minutes: number, target: number) =>
+    `${Math.round((minutes / target) * 100)}%`;
+  const status = (
+    minutes: number,
+    target: number,
+    goalType: TimeLabel["goalType"],
+  ) =>
+    goalType === "maximum"
+      ? minutes > target
+        ? `${duration(minutes - target)} over maximum`
+        : minutes === target
+          ? "Maximum reached"
+          : `${duration(target - minutes)} available`
+      : minutes >= target
+        ? "Minimum met"
+        : `${duration(target - minutes)} to minimum`;
   const progress = (
     name: string,
     minutes: number,
     target: number,
     period: string,
+    goalType: TimeLabel["goalType"],
   ) => (
-    <div class="timeline-goal-progress">
-      <span>
-        {period}: {duration(minutes)} / {duration(target)}
-      </span>
+    <div
+      class={`timeline-goal-progress${goalType === "maximum" && minutes > target ? " is-over-maximum" : ""}`}
+    >
+      <div class="timeline-goal-detail">
+        <span>
+          {period}: {duration(minutes)} / {duration(target)}
+        </span>
+        <span
+          class="timeline-goal-percentage"
+          aria-label={`${period} ${percentage(minutes, target)} of ${goalType}`}
+        >
+          {percentage(minutes, target)}
+        </span>
+      </div>
       <progress
         max={target}
         value={Math.min(minutes, target)}
         aria-label={`${name} ${period.toLowerCase()} goal`}
       />
+      <p class="timeline-goal-status">{status(minutes, target, goalType)}</p>
     </div>
   );
   return (
@@ -67,10 +99,51 @@ export const TrackingControls = ({
       ) : (
         <section id="time-block-form" />
       )}
-      {error && values.operation !== "label" && values.operation !== "block" ? (
+      {error &&
+      !confirmStart &&
+      values.operation !== "label" &&
+      values.operation !== "block" ? (
         <p class="timeline-error" role="alert">
           {error}
         </p>
+      ) : null}
+      {confirmStart ? (
+        <dialog
+          id="maximum-warning-dialog"
+          class="form-dialog"
+          open
+          role="alertdialog"
+          aria-labelledby="maximum-warning-title"
+          aria-describedby="maximum-warning-message"
+        >
+          <header class="dialog-heading">
+            <h2 id="maximum-warning-title">Time maximum reached</h2>
+            <a
+              class="dialog-close"
+              href={closeUrl}
+              data-dialog-close=""
+              aria-label="Close maximum warning"
+            >
+              ×
+            </a>
+          </header>
+          <p
+            id="maximum-warning-message"
+            class="timeline-error"
+            role="alert"
+            tabindex="-1"
+          >
+            {error}
+          </p>
+          <TimeForm action="/timeline/start" day={day} options={options}>
+            <input type="hidden" name="labelId" value={values.labelId} />
+            <input type="hidden" name="confirmMaximum" value="true" />
+            <button type="submit">Start anyway</button>
+            <a class="button secondary" href={closeUrl} data-dialog-close="">
+              Cancel
+            </a>
+          </TimeForm>
+        </dialog>
       ) : null}
       {showGoals && labels.length ? (
         <div class="stats tracking-goal-list">
@@ -92,8 +165,14 @@ export const TrackingControls = ({
               ? weeklyMinutes(matching, day, now)
               : dailyMinutes;
             const target = weekly ? label.weeklyGoalMinutes : label.goalMinutes;
+            const overMaximum =
+              label.goalType === "maximum" &&
+              ((target > 0 && minutes > target) ||
+                (label.goalMinutes > 0 && dailyMinutes > label.goalMinutes));
             return (
-              <article class="card timeline-goal">
+              <article
+                class={`card timeline-goal${overMaximum ? " is-over-maximum" : ""}`}
+              >
                 <h3>
                   <a
                     href={url}
@@ -103,18 +182,33 @@ export const TrackingControls = ({
                     {label.name}
                   </a>
                 </h3>
-                <strong>{duration(minutes)}</strong>
+                <div class="timeline-goal-metric">
+                  <strong>{duration(minutes)}</strong>
+                  {target > 0 ? (
+                    <span
+                      class="timeline-goal-percentage"
+                      aria-label={`${weekly ? "Weekly" : "Daily"} ${percentage(minutes, target)} of ${label.goalType}`}
+                    >
+                      {percentage(minutes, target)}
+                    </span>
+                  ) : null}
+                </div>
                 <p>
                   {target
-                    ? `of ${duration(target)} ${weekly ? "weekly" : "daily"} goal`
+                    ? `of ${duration(target)} ${weekly ? "weekly" : "daily"} ${label.goalType}`
                     : `tracked ${weekly ? "this week" : "today"}`}
                 </p>
                 {target ? (
-                  <progress
-                    max={target}
-                    value={Math.min(minutes, target)}
-                    aria-label={`${label.name} ${weekly ? "weekly" : "daily"} goal`}
-                  />
+                  <>
+                    <progress
+                      max={target}
+                      value={Math.min(minutes, target)}
+                      aria-label={`${label.name} ${weekly ? "weekly" : "daily"} goal`}
+                    />
+                    <p class="timeline-goal-status">
+                      {status(minutes, target, label.goalType)}
+                    </p>
+                  </>
                 ) : null}
                 {weekly && label.goalMinutes
                   ? progress(
@@ -122,6 +216,7 @@ export const TrackingControls = ({
                       dailyMinutes,
                       label.goalMinutes,
                       "Daily",
+                      label.goalType,
                     )
                   : null}
               </article>

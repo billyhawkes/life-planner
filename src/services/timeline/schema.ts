@@ -1,7 +1,11 @@
 import { Schema } from "effect";
 import { HabitDate } from "@/services/habits/schema";
 
+export const GoalType = Schema.Literals(["minimum", "maximum"]).annotate({
+  identifier: "TimeGoalType",
+});
 export const LabelPayload = Schema.Struct({
+  goalType: Schema.optional(GoalType),
   name: Schema.String.check(Schema.isPattern(/\S/), Schema.isMaxLength(100)),
   goalMinutes: Schema.Number.check(
     Schema.isInt(),
@@ -16,6 +20,7 @@ export const LabelPayload = Schema.Struct({
 export const TimeLabel = Schema.Struct({
   id: Schema.String,
   ...LabelPayload.fields,
+  goalType: GoalType,
 }).annotate({ identifier: "TimeLabel" });
 const timestamp = Schema.String.check(
   Schema.makeFilter(
@@ -53,17 +58,20 @@ export const TimeId = Schema.Struct({ id: Schema.String }).annotate({
 });
 export const StartTimerPayload = Schema.Struct({
   labelId: Schema.String.check(Schema.isMinLength(1)),
+  confirmMaximum: Schema.optional(Schema.Boolean),
 }).annotate({ identifier: "StartTimerPayload" });
 export class TimelineError extends Schema.TaggedError<TimelineError>()(
   "TimelineError",
   {
     message: Schema.String,
+    maximumReached: Schema.optional(Schema.Boolean),
     cause: Schema.optional(Schema.Defect()),
   },
 ) {}
 export const decodeLabelForm = (values: Record<string, string>) =>
   Schema.decodeUnknownEffect(LabelPayload)({
     name: values.name?.trim(),
+    goalType: values.goalType ?? "minimum",
     goalMinutes: Number(values.goalMinutes),
     weeklyGoalMinutes: Number(values.weeklyGoalMinutes ?? "0"),
     color: values.color,

@@ -1,6 +1,7 @@
 import { Context, Effect, Layer, Schema } from "effect";
 import { SqlClient } from "effect/sql";
 import { DatabaseLive, DatabaseTest } from "@/db";
+import { maximumWarning } from "./helpers";
 import {
   BlockPayload,
   LabelPayload,
@@ -26,7 +27,7 @@ export class Timeline extends Context.Service<Timeline>()("Timeline", {
       );
     const listLabels = Effect.fn("Timeline.listLabels")((_input: {}) =>
       protect(
-        sql`SELECT id, name, goal_minutes AS "goalMinutes", weekly_goal_minutes AS "weeklyGoalMinutes", color FROM time_labels ORDER BY created_at, id`.pipe(
+        sql`SELECT id, name, goal_type AS "goalType", goal_minutes AS "goalMinutes", weekly_goal_minutes AS "weeklyGoalMinutes", color FROM time_labels ORDER BY created_at, id`.pipe(
           Effect.flatMap(Schema.decodeUnknownEffect(Schema.Array(TimeLabel))),
         ),
       ),
@@ -47,10 +48,10 @@ export class Timeline extends Context.Service<Timeline>()("Timeline", {
       );
       if (input.id) {
         const rows =
-          yield* sql`UPDATE time_labels SET name = ${payload.name}, goal_minutes = ${payload.goalMinutes}, weekly_goal_minutes = ${payload.weeklyGoalMinutes}, color = ${payload.color} WHERE id = ${input.id} RETURNING id`;
+          yield* sql`UPDATE time_labels SET name = ${payload.name}, goal_type = ${payload.goalType ?? "minimum"}, goal_minutes = ${payload.goalMinutes}, weekly_goal_minutes = ${payload.weeklyGoalMinutes}, color = ${payload.color} WHERE id = ${input.id} RETURNING id`;
         if (!rows.length) return yield* fail("Label not found.");
       } else
-        yield* sql`INSERT INTO time_labels (id, name, goal_minutes, weekly_goal_minutes, color) VALUES (${crypto.randomUUID()}, ${payload.name}, ${payload.goalMinutes}, ${payload.weeklyGoalMinutes}, ${payload.color})`;
+        yield* sql`INSERT INTO time_labels (id, name, goal_type, goal_minutes, weekly_goal_minutes, color) VALUES (${crypto.randomUUID()}, ${payload.name}, ${payload.goalType ?? "minimum"}, ${payload.goalMinutes}, ${payload.weeklyGoalMinutes}, ${payload.color})`;
     }, protect);
     const lock = sql`SELECT pg_advisory_xact_lock(7319042)`;
     const saveBlock = Effect.fn("Timeline.saveBlock")(
@@ -92,28 +93,38 @@ export class Timeline extends Context.Service<Timeline>()("Timeline", {
           ),
         ),
     );
-    const start = Effect.fn("Timeline.start")((input: { labelId: string }) =>
-      protect(
-        sql.withTransaction(
-          Effect.gen(function* () {
-            yield* lock;
-            const labels =
-              yield* sql`SELECT id FROM time_labels WHERE id = ${input.labelId}`;
-            if (!labels.length) return yield* fail("Choose an existing label.");
-            const running = yield* sql<{
-              startTime: string;
-            }>`SELECT to_char(start_time AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS "startTime" FROM time_blocks WHERE end_time IS NULL`;
-            const now = new Date(
-              Math.max(
-                Date.now(),
-                running[0] ? Date.parse(running[0].startTime) + 1 : 0,
-              ),
-            ).toISOString();
-            yield* sql`UPDATE time_blocks SET end_time = ${now}::timestamptz WHERE end_time IS NULL`;
-            yield* sql`INSERT INTO time_blocks (id, label_id, start_time) VALUES (${crypto.randomUUID()}, ${input.labelId}, ${now}::timestamptz)`;
-          }),
+    const start = Effect.fn("Timeline.start")(
+      (input: { labelId: string; confirmMaximum?: boolean }) =>
+        protect(
+          sql.withTransaction(
+            Effect.gen(function* () {
+              yield* lock;
+              const label = (yield* listLabels({})).find(
+                (label) => label.id === input.labelId,
+              );
+              if (!label) return yield* fail("Choose an existing label.");
+              if (!input.confirmMaximum) {
+                const warning = maximumWarning(label, yield* listBlocks({}));
+                if (warning)
+                  return yield* new TimelineError({
+                    message: warning,
+                    maximumReached: true,
+                  });
+              }
+              const running = yield* sql<{
+                startTime: string;
+              }>`SELECT to_char(start_time AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS "startTime" FROM time_blocks WHERE end_time IS NULL`;
+              const now = new Date(
+                Math.max(
+                  Date.now(),
+                  running[0] ? Date.parse(running[0].startTime) + 1 : 0,
+                ),
+              ).toISOString();
+              yield* sql`UPDATE time_blocks SET end_time = ${now}::timestamptz WHERE end_time IS NULL`;
+              yield* sql`INSERT INTO time_blocks (id, label_id, start_time) VALUES (${crypto.randomUUID()}, ${input.labelId}, ${now}::timestamptz)`;
+            }),
+          ),
         ),
-      ),
     );
     const stop = Effect.fn("Timeline.stop")((input: { id: string }) =>
       protect(

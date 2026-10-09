@@ -116,7 +116,10 @@ const mutate = (
         const payload = yield* decodeBlockForm(values);
         yield* service.saveBlock({ id, payload });
       } else if (operation === "start")
-        yield* service.start({ labelId: values.labelId ?? "" });
+        yield* service.start({
+          labelId: values.labelId ?? "",
+          confirmMaximum: values.confirmMaximum === "true",
+        });
       else if (operation === "stop") yield* service.stop({ id: id ?? "" });
       else yield* service.removeBlock({ id: id ?? "" });
     }).pipe(Effect.result);
@@ -129,6 +132,10 @@ const mutate = (
         {
           ...values,
           operation,
+          ...(result.failure instanceof TimelineError &&
+          result.failure.maximumReached
+            ? { confirmStart: "true" }
+            : {}),
           ...(operation === "block" && id ? { editBlock: id } : {}),
           ...(operation === "label" ? { editLabel: id ?? "" } : {}),
         },
@@ -165,7 +172,10 @@ const browserError = (error: unknown) =>
   );
 const timelineApiError = (error: TimelineError) =>
   error.cause === undefined
-    ? new TimelineError({ message: error.message })
+    ? new TimelineError({
+        message: error.message,
+        maximumReached: error.maximumReached,
+      })
     : new HttpApiError.InternalServerError({});
 
 export const timelineHandler = HttpApiBuilder.group(

@@ -1,4 +1,4 @@
-const CACHE_NAME = "life-planner-v1";
+const CACHE_NAME = "life-planner-v2";
 const OFFLINE_PAGE = "/workouts?view=today";
 const APP_SHELL = [
   OFFLINE_PAGE,
@@ -9,6 +9,7 @@ const APP_SHELL = [
   "/datastar.js",
   "/pwa.js",
   "/manifest.webmanifest",
+  "/icon.svg",
   "/icon-192.png",
   "/icon-512.png",
 ];

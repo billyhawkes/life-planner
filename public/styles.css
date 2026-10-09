@@ -220,9 +220,26 @@
 }
 .timeline-goal progress {
   width: 100%;
-  height: 4px;
+  height: 10px;
+  display: block;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  background: var(--canvas);
   accent-color: var(--accent);
-  margin-block: 4px 0;
+  margin-block: 8px 0;
+}
+.timeline-goal progress::-webkit-progress-bar {
+  background: var(--canvas);
+  border-radius: 999px;
+}
+.timeline-goal progress::-webkit-progress-value {
+  background: var(--accent);
+  border-radius: 999px;
+}
+.timeline-goal progress::-moz-progress-bar {
+  background: var(--accent);
+  border-radius: 999px;
 }
 #timeline-page details {
   margin-block: 0.75rem;
@@ -257,6 +274,42 @@
 }
 .timeline-goal-progress {
   margin-top: 0.25rem;
+}
+.timeline-goal-metric,
+.timeline-goal-detail {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-variant-numeric: tabular-nums;
+}
+.timeline-goal .timeline-goal-percentage {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.timeline-goal-metric .timeline-goal-percentage {
+  background: var(--canvas);
+  border-radius: var(--control-radius);
+  padding: 0.25rem 0.5rem;
+}
+.timeline-goal .timeline-goal-status {
+  margin-block: 0.5rem 0;
+  font-size: 0.8rem;
+}
+.timeline-goal.is-over-maximum .timeline-goal-percentage,
+.timeline-goal.is-over-maximum .timeline-goal-status {
+  color: var(--danger);
+}
+.timeline-goal.is-over-maximum progress {
+  accent-color: var(--danger);
+}
+.timeline-goal.is-over-maximum progress::-webkit-progress-value {
+  background: var(--danger);
+}
+.timeline-goal.is-over-maximum progress::-moz-progress-bar {
+  background: var(--danger);
 }
 .week-timelines {
   --week-heading-height: 66px;
@@ -591,6 +644,7 @@ textarea {
 button,
 .button {
   display: inline-block;
+  text-align: center;
   border: var(--border-size-1) solid var(--accent);
   border-radius: var(--control-radius);
   padding: var(--size-2) var(--size-3);

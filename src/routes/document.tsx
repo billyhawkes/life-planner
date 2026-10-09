@@ -12,7 +12,14 @@ export const renderDocument = (body: Html) =>
           <meta name="apple-mobile-web-app-capable" content="yes" />
           <meta name="apple-mobile-web-app-title" content="Life Planner" />
           <title>Life Planner</title>
+          <link
+            rel="icon"
+            type="image/png"
+            sizes="192x192"
+            href="/icon-192.png"
+          />
           <link rel="manifest" href="/manifest.webmanifest" />
+          <link rel="icon" type="image/svg+xml" href="/icon.svg" />
           <link rel="apple-touch-icon" href="/icon-180.png" />
           <link rel="stylesheet" href="/open-props-1.7.23.min.css" />
           <link rel="stylesheet" href={stylesUrl} />

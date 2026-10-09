@@ -1,7 +1,7 @@
 import { dateKey } from "@/services/workouts/helpers";
 import { HabitDate } from "@/services/habits/schema";
 import { Schema } from "effect";
-import type { TimeBlock } from "./schema";
+import type { TimeBlock, TimeLabel } from "./schema";
 
 export const selectedDay = (value?: string) =>
   Schema.is(HabitDate)(value) ? value : dateKey(new Date());
@@ -59,6 +59,30 @@ export const weeklyMinutes = (
       ),
     0,
   );
+export const maximumWarning = (
+  label: TimeLabel,
+  blocks: readonly TimeBlock[],
+  now = Date.now(),
+) => {
+  if (label.goalType !== "maximum") return undefined;
+  const day = dateKey(new Date(now));
+  const matching = blocks.filter((block) => block.labelId === label.id);
+  const periods = [];
+  if (
+    label.goalMinutes > 0 &&
+    matching.reduce((sum, block) => sum + blockMinutes(block, day, now), 0) >=
+      label.goalMinutes
+  )
+    periods.push("daily");
+  if (
+    label.weeklyGoalMinutes > 0 &&
+    weeklyMinutes(matching, day, now) >= label.weeklyGoalMinutes
+  )
+    periods.push("weekly");
+  return periods.length
+    ? `${label.name} has reached its ${periods.join(" and ")} maximum. Start another slot anyway?`
+    : undefined;
+};
 export type TimelineWindow = {
   readonly startHour: number;
   readonly endHour: number;
