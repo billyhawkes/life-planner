@@ -1,6 +1,6 @@
 import { Effect } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
-import { HttpApiBuilder } from "effect/http-api";
+import { HttpApiBuilder, HttpApiError } from "effect/http-api";
 import { AppApi } from "@/api";
 import { isDatastar, sse } from "@/lib/browser";
 import { patchElements } from "@/lib/datastar";
@@ -163,11 +163,77 @@ const browserError = (error: unknown) =>
       ),
     ),
   );
+const timelineApiError = (error: TimelineError) =>
+  error.cause === undefined
+    ? new TimelineError({ message: error.message })
+    : new HttpApiError.InternalServerError({});
+
 export const timelineHandler = HttpApiBuilder.group(
   AppApi,
   "timeline",
   (handlers) =>
     handlers
+      .handle("createLabel", ({ payload }) =>
+        Effect.flatMap(Timeline, (service) =>
+          service
+            .saveLabel({ payload })
+            .pipe(Effect.mapError(timelineApiError)),
+        ),
+      )
+      .handle("updateTimeLabel", ({ params, payload }) =>
+        Effect.flatMap(Timeline, (service) =>
+          service
+            .saveLabel({ id: params.id, payload })
+            .pipe(Effect.mapError(timelineApiError)),
+        ),
+      )
+      .handle("deleteBlock", ({ params }) =>
+        Effect.flatMap(Timeline, (service) =>
+          service.removeBlock(params).pipe(Effect.mapError(timelineApiError)),
+        ),
+      )
+      .handle("startTimer", ({ payload }) =>
+        Effect.flatMap(Timeline, (service) =>
+          service.start(payload).pipe(Effect.mapError(timelineApiError)),
+        ),
+      )
+      .handle("stopTimer", ({ params }) =>
+        Effect.flatMap(Timeline, (service) =>
+          service.stop(params).pipe(Effect.mapError(timelineApiError)),
+        ),
+      )
+      .handle("listLabels", () =>
+        Effect.flatMap(Timeline, (service) =>
+          service
+            .listLabels({})
+            .pipe(
+              Effect.mapError(() => new HttpApiError.InternalServerError({})),
+            ),
+        ),
+      )
+      .handle("listBlocks", () =>
+        Effect.flatMap(Timeline, (service) =>
+          service
+            .listBlocks({})
+            .pipe(
+              Effect.mapError(() => new HttpApiError.InternalServerError({})),
+            ),
+        ),
+      )
+      .handle("createBlock", ({ payload }) =>
+        Effect.flatMap(Timeline, (service) =>
+          service
+            .saveBlock({ payload })
+            .pipe(Effect.mapError(timelineApiError)),
+        ),
+      )
+      .handle("updateTimeBlock", ({ params, payload }) =>
+        Effect.flatMap(Timeline, (service) =>
+          service
+            .saveBlock({ id: params.id, payload })
+            .pipe(Effect.mapError(timelineApiError)),
+        ),
+      )
       .handle("blockForm", ({ query }) =>
         blockForm(query).pipe(Effect.catch(browserError)),
       )

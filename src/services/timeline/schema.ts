@@ -51,6 +51,9 @@ export const TimeFields = Schema.Record(Schema.String, Schema.String).annotate({
 export const TimeId = Schema.Struct({ id: Schema.String }).annotate({
   identifier: "TimeId",
 });
+export const StartTimerPayload = Schema.Struct({
+  labelId: Schema.String.check(Schema.isMinLength(1)),
+}).annotate({ identifier: "StartTimerPayload" });
 export class TimelineError extends Schema.TaggedError<TimelineError>()(
   "TimelineError",
   {

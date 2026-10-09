@@ -44,6 +44,16 @@ export const Workout = Schema.Struct({
 export const WorkoutIndex = Schema.Array(Workout).annotate({
   identifier: "WorkoutIndex",
 });
+export const WorkoutImportResult = Schema.Struct({
+  imported: Schema.Number.check(
+    Schema.isInt(),
+    Schema.isGreaterThanOrEqualTo(0),
+  ),
+  plansReplaced: Schema.Number.check(
+    Schema.isInt(),
+    Schema.isGreaterThanOrEqualTo(0),
+  ),
+}).annotate({ identifier: "WorkoutImportResult" });
 
 export const WorkoutListQuery = Schema.Struct({
   limit: Schema.optional(Schema.Number),

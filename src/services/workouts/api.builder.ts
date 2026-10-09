@@ -237,6 +237,11 @@ export const workoutsHandler = HttpApiBuilder.group(
   "workouts",
   (handlers) =>
     handlers
+      .handle("importWorkouts", ({ payload }) =>
+        Effect.flatMap(Workouts, (service) =>
+          service.import(payload).pipe(Effect.mapError(internalServerError)),
+        ),
+      )
       .handle("deleteWorkout", ({ params }) =>
         Effect.gen(function* () {
           const workouts = yield* Workouts;

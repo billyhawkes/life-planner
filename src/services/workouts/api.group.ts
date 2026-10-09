@@ -17,6 +17,8 @@ import {
   WorkoutFormFields,
   WorkoutViewQuery,
   HealthImportPayload,
+  WorkoutIndex,
+  WorkoutImportResult,
 } from "./schema";
 
 const HtmlResponse = Schema.String.pipe(
@@ -32,6 +34,21 @@ const BrowserResponse = [
 ];
 
 export const WorkoutsApiGroup = HttpApiGroup.make("workouts")
+  .add(
+    HttpApiEndpoint.post("importWorkouts", "/api/workouts/import", {
+      payload: WorkoutIndex,
+      success: WorkoutImportResult,
+      error: HttpApiError.InternalServerError,
+    })
+      .annotate(
+        OpenApi.Summary,
+        "Import parsed workout records, updating matching IDs and replacing matching planned sessions",
+      )
+      .annotate(
+        OpenApi.Description,
+        "Accepts an array of parsed workout records, not an archive path. For Apple Health ZIP files use the browser upload form.",
+      ),
+  )
   .add(
     HttpApiEndpoint.delete("deleteWorkout", "/api/workouts/:id", {
       params: WorkoutIdParams,

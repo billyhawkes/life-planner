@@ -9,6 +9,6 @@ export const mcpLayer = HttpApiMcp.layerHttp({
   path: "/api/mcp",
   baseUrl:
     process.env.SITE_URL ?? `http://localhost:${process.env.PORT ?? 3000}`,
-  methods: ["get"],
+  methods: ["get", "post", "put", "patch", "delete"],
   toolMetaKey: "training-ledger/httpapi",
 }).pipe(Layer.provide(FetchHttpClient.layer));

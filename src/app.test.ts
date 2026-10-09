@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { BunHttpServer, BunServices } from "@effect/platform-bun";
-import { Effect, Layer } from "effect";
+import { Effect, Layer, Schema } from "effect";
 import { BlobWriter, TextReader, ZipWriter } from "@zip.js/zip.js";
 import { HttpRouter } from "effect/http";
 import { SqlClient } from "effect/sql";
@@ -10,6 +10,8 @@ import { DatabaseTest } from "@/db";
 import { Workouts } from "@/services/workouts";
 import { Habits } from "@/services/habits";
 import { Timeline } from "@/services/timeline";
+import { TimeBlock, TimeLabel } from "@/services/timeline/schema";
+import { WorkoutImportResult } from "@/services/workouts/schema";
 import { dateKey, localDateTime } from "@/services/workouts/helpers";
 
 describe.skipIf(!process.env.TEST_DATABASE_URL)(
@@ -96,10 +98,11 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
               );
             }
             const timeLabelName = `time-http-${crypto.randomUUID()}`;
+            const apiLabelName = `time-api-${crypto.randomUUID()}`;
             yield* Effect.addFinalizer(() =>
               Effect.gen(function* () {
-                yield* sql`DELETE FROM time_blocks WHERE label_id IN (SELECT id FROM time_labels WHERE name = ${timeLabelName})`;
-                yield* sql`DELETE FROM time_labels WHERE name = ${timeLabelName}`;
+                yield* sql`DELETE FROM time_blocks WHERE label_id IN (SELECT id FROM time_labels WHERE name = ${timeLabelName} OR name = ${apiLabelName})`;
+                yield* sql`DELETE FROM time_labels WHERE name = ${timeLabelName} OR name = ${apiLabelName}`;
               }).pipe(Effect.orDie),
             );
             const timeLabelResponse = yield* request("/timeline/labels", {
@@ -116,6 +119,151 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
             const timeLabel = (yield* timeline.listLabels({})).find(
               (label) => label.name === timeLabelName,
             )!;
+            const labelsResponse = yield* request("/api/timeline/labels");
+            expect(labelsResponse.status).toBe(200);
+            const labels = yield* Schema.decodeUnknownEffect(
+              Schema.fromJsonString(Schema.Array(TimeLabel)),
+            )(yield* Effect.promise(() => labelsResponse.text()));
+            expect(labels).toContainEqual(timeLabel);
+            const labelPayload = {
+              name: apiLabelName,
+              goalMinutes: 60,
+              weeklyGoalMinutes: 300,
+              color: "#15803d",
+            };
+            expect(
+              (yield* request("/api/timeline/labels", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(labelPayload),
+              })).status,
+            ).toBe(204);
+            const apiLabel = (yield* timeline.listLabels({})).find(
+              (label) => label.name === apiLabelName,
+            );
+            if (!apiLabel) return yield* Effect.die("API label was not saved");
+            expect(
+              (yield* request(`/api/timeline/labels/${apiLabel.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ ...labelPayload, goalMinutes: 120 }),
+              })).status,
+            ).toBe(204);
+            expect(
+              (yield* timeline.listLabels({})).find(
+                (label) => label.id === apiLabel.id,
+              )?.goalMinutes,
+            ).toBe(120);
+            expect(
+              (yield* request("/api/timeline/timer", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ labelId: "missing-label" }),
+              })).status,
+            ).toBe(400);
+            expect(
+              (yield* request("/api/timeline/timer", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ labelId: apiLabel.id }),
+              })).status,
+            ).toBe(204);
+            const runningBlock = (yield* timeline.listBlocks({})).find(
+              (block) =>
+                block.labelId === apiLabel.id && block.endTime === null,
+            );
+            if (!runningBlock)
+              return yield* Effect.die("Timer was not started");
+            expect(
+              (yield* request(`/api/timeline/blocks/${runningBlock.id}/stop`, {
+                method: "POST",
+              })).status,
+            ).toBe(204);
+            expect(
+              (yield* timeline.listBlocks({})).find(
+                (block) => block.id === runningBlock.id,
+              )?.endTime,
+            ).not.toBeNull();
+            expect(
+              (yield* request(`/api/timeline/blocks/${runningBlock.id}`, {
+                method: "DELETE",
+              })).status,
+            ).toBe(204);
+            const apiBlock = {
+              labelId: timeLabel.id,
+              startTime: "2018-01-01T09:00:00-05:00",
+              endTime: "2018-01-01T10:00:00-05:00",
+              notes: "JSON API test",
+            };
+            const createApiBlock = (payload: typeof apiBlock) =>
+              request("/api/timeline/blocks", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+              });
+            expect((yield* createApiBlock(apiBlock)).status).toBe(204);
+            const blocksResponse = yield* request("/api/timeline/blocks");
+            expect(blocksResponse.status).toBe(200);
+            const apiBlocks = yield* Schema.decodeUnknownEffect(
+              Schema.fromJsonString(Schema.Array(TimeBlock)),
+            )(yield* Effect.promise(() => blocksResponse.text()));
+            const savedApiBlock = apiBlocks.find(
+              (block) =>
+                block.notes === apiBlock.notes &&
+                block.labelId === timeLabel.id,
+            );
+            expect(savedApiBlock).toMatchObject({
+              startTime: "2018-01-01T14:00:00.000Z",
+              endTime: "2018-01-01T15:00:00.000Z",
+            });
+            if (!savedApiBlock)
+              return yield* Effect.die("API block was not saved");
+            const overlapResponse = yield* createApiBlock(apiBlock);
+            expect(overlapResponse.status).toBe(400);
+            expect(
+              yield* Effect.promise(() => overlapResponse.text()),
+            ).toContain("overlaps another block");
+            expect(
+              (yield* createApiBlock({
+                ...apiBlock,
+                endTime: apiBlock.startTime,
+              })).status,
+            ).toBe(400);
+            expect(
+              (yield* createApiBlock({ ...apiBlock, labelId: "missing-label" }))
+                .status,
+            ).toBe(400);
+            const updatedApiBlock = yield* request(
+              `/api/timeline/blocks/${savedApiBlock.id}`,
+              {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  ...apiBlock,
+                  endTime: "2018-01-01T11:00:00-05:00",
+                  notes: "Updated through JSON",
+                }),
+              },
+            );
+            expect(updatedApiBlock.status).toBe(204);
+            expect(
+              (yield* timeline.listBlocks({})).find(
+                (block) => block.id === savedApiBlock.id,
+              ),
+            ).toMatchObject({
+              endTime: "2018-01-01T16:00:00.000Z",
+              notes: "Updated through JSON",
+            });
+            expect(
+              (yield* request(`/api/timeline/blocks/${savedApiBlock.id}`, {
+                method: "DELETE",
+              })).status,
+            ).toBe(204);
+            expect(
+              (yield* request(`/api/timeline/blocks/${savedApiBlock.id}`, {
+                method: "DELETE",
+              })).status,
+            ).toBe(400);
             const goalDialog = yield* request(
               `/timeline/goals/new?view=week&planner=true&edit=${timeLabel.id}`,
               { headers: { "Datastar-Request": "true" } },
@@ -632,7 +780,14 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
               "/api/habits",
               "/api/habits/{id}",
               "/api/habits/{id}/completion",
+              "/api/timeline/blocks",
+              "/api/timeline/blocks/{id}",
+              "/api/timeline/blocks/{id}/stop",
+              "/api/timeline/labels",
+              "/api/timeline/labels/{id}",
+              "/api/timeline/timer",
               "/api/workouts",
+              "/api/workouts/import",
               "/api/workouts/summary",
               "/api/workouts/{id}",
             ]);
@@ -716,6 +871,18 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
             });
             expect(imported.status).toBe(303);
             expect(imported.headers.get("location")).toContain("imported=1");
+            expect((yield* workouts.list({ activityType })).length).toBe(1);
+            const jsonImport = yield* request("/api/workouts/import", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(yield* workouts.list({ activityType })),
+            });
+            expect(jsonImport.status).toBe(200);
+            expect(
+              yield* Schema.decodeUnknownEffect(
+                Schema.fromJsonString(WorkoutImportResult),
+              )(yield* Effect.promise(() => jsonImport.text())),
+            ).toEqual({ imported: 1, plansReplaced: 0 });
             expect((yield* workouts.list({ activityType })).length).toBe(1);
             const reimported = yield* request("/workouts/import?view=stats", {
               method: "POST",
