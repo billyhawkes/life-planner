@@ -1,0 +1,13 @@
+{
+  "mcp": {
+    "servers": {
+      "life-planner": {
+        "type": "remote",
+        "url": "https://life.billyhawkes.com/api/mcp",
+        "oauth": {
+          "auth_server_metadata_url": "https://billyhawkes.cloudflareaccess.com/.well-known/oauth-authorization-server"
+        }
+      }
+    }
+  }
+}
