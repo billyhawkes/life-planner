@@ -384,6 +384,13 @@
   gap: 0.25rem;
   font-size: 0.8rem;
 }
+.day-timeline {
+  position: relative;
+}
+.day-timeline > .sr-only {
+  inset: 0 auto auto 0;
+  margin: 0;
+}
 .day-timeline .timeline-section-heading h3 {
   margin: 0;
 }
@@ -1143,12 +1150,16 @@ tbody tr:hover {
   :is(.planner-view-week, .planner-view-calendar) > .planner-content {
     overflow: auto;
   }
+  .planner-view-week > .planner-content {
+    overflow: hidden;
+  }
   .planner-content > :is(.week-timelines, .calendar-panel) {
     flex: 1;
     min-height: 0;
   }
   .week-timelines {
     overflow: auto;
+    overscroll-behavior: contain;
   }
   .week-timelines .schedule-day-top {
     position: sticky;
