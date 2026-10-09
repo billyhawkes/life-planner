@@ -2,6 +2,7 @@ import { HttpApi, OpenApi } from "effect/http-api";
 
 import { WorkoutsApiGroup } from "@/services/workouts/api.group";
 import { HabitsApiGroup } from "@/services/habits/api.group";
+import { TimelineApiGroup } from "@/services/timeline/api.group";
 
 export const AppApi = HttpApi.make("AppApi")
   .annotateMerge(
@@ -12,4 +13,5 @@ export const AppApi = HttpApi.make("AppApi")
     }),
   )
   .add(WorkoutsApiGroup)
-  .add(HabitsApiGroup);
+  .add(HabitsApiGroup)
+  .add(TimelineApiGroup);

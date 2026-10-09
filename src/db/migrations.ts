@@ -77,6 +77,32 @@ const removeSparklesHabitIcon = Effect.gen(function* () {
   yield* sql`UPDATE habits SET icon = 'sun' WHERE icon = 'sparkles'`;
 });
 
+const timeline = Effect.gen(function* () {
+  const sql = yield* SqlClient.SqlClient;
+  yield* sql`CREATE TABLE time_labels (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL CHECK (length(trim(name)) BETWEEN 1 AND 100),
+    goal_minutes INTEGER NOT NULL CHECK (goal_minutes BETWEEN 0 AND 1440),
+    color TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`;
+  yield* sql`CREATE TABLE time_blocks (
+    id TEXT PRIMARY KEY,
+    label_id TEXT NOT NULL REFERENCES time_labels(id),
+    start_time TIMESTAMPTZ NOT NULL,
+    end_time TIMESTAMPTZ,
+    notes TEXT NOT NULL DEFAULT '',
+    CHECK (end_time IS NULL OR end_time > start_time)
+  )`;
+  yield* sql`CREATE UNIQUE INDEX time_blocks_one_running ON time_blocks ((true)) WHERE end_time IS NULL`;
+  yield* sql`CREATE INDEX time_blocks_start ON time_blocks (start_time)`;
+});
+
+const weeklyTimeGoals = Effect.gen(function* () {
+  const sql = yield* SqlClient.SqlClient;
+  yield* sql`ALTER TABLE time_labels ADD COLUMN weekly_goal_minutes INTEGER NOT NULL DEFAULT 0 CHECK (weekly_goal_minutes BETWEEN 0 AND 10080)`;
+});
+
 export const migrate = Migrator.make({})({
   loader: Migrator.fromRecord({
     "001_workouts": initial,
@@ -84,5 +110,7 @@ export const migrate = Migrator.make({})({
     "003_habit_icons": habitIcons,
     "004_lucide_habit_icons": lucideHabitIcons,
     "005_remove_sparkles_habit_icon": removeSparklesHabitIcon,
+    "006_timeline": timeline,
+    "007_weekly_time_goals": weeklyTimeGoals,
   }),
 });

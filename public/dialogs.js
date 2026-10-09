@@ -57,6 +57,8 @@ document.addEventListener("click", (event) => {
     if (
       url.searchParams.has("new") ||
       url.searchParams.has("edit") ||
+      url.pathname === "/timeline/blocks/new" ||
+      url.pathname === "/timeline/goals/new" ||
       url.searchParams.has("import")
     ) {
       opener =

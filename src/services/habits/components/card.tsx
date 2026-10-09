@@ -37,7 +37,7 @@ export const HabitCard = ({
           type="submit"
           aria-label={`${completed ? "Mark incomplete" : "Complete"}: ${habit.name} on ${date}`}
           aria-pressed={String(completed)}
-          title={`${completed ? "Mark incomplete" : "Complete"}. Right-click for habit actions.`}
+          title={`${habit.name} — ${completed ? "Mark incomplete" : "Complete"}. Right-click for habit actions.`}
         >
           <span class="habit-symbol" aria-hidden="true">
             <Icon name={habit.icon} />

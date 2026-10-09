@@ -12,6 +12,8 @@ import { Workouts } from "@/services/workouts";
 import { workoutsHandler } from "@/services/workouts/api.builder";
 import { Habits } from "@/services/habits";
 import { habitsHandler } from "@/services/habits/api.builder";
+import { Timeline } from "@/services/timeline";
+import { timelineHandler } from "@/services/timeline/api.builder";
 import datastar from "../public/datastar.js" with { type: "text" };
 import openProps from "../public/open-props-1.7.23.min.css" with { type: "text" };
 import dialogs from "../public/dialogs.js" with { type: "text" };
@@ -44,7 +46,9 @@ const ready = Effect.gen(function* () {
 
 export const applicationRoutes = Layer.mergeAll(
   HttpApiBuilder.layer(AppApi, { openapiPath: "/api/openapi.json" }).pipe(
-    Layer.provide(Layer.merge(workoutsHandler, habitsHandler)),
+    Layer.provide(
+      Layer.mergeAll(workoutsHandler, habitsHandler, timelineHandler),
+    ),
   ),
   HttpApiScalar.layer(AppApi, { path: "/api/docs" }),
   mcpLayer,
@@ -140,8 +144,10 @@ export const applicationRoutes = Layer.mergeAll(
 
 export const AppLive = applicationRoutes.pipe(
   HttpRouter.provideRequest(
-    Layer.merge(Workouts.baseLayer, Habits.baseLayer).pipe(
-      Layer.provideMerge(DatabaseLive),
-    ),
+    Layer.mergeAll(
+      Workouts.baseLayer,
+      Habits.baseLayer,
+      Timeline.baseLayer,
+    ).pipe(Layer.provideMerge(DatabaseLive)),
   ),
 );

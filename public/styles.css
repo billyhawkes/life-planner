@@ -1,3 +1,447 @@
+.timeline-heading,
+.timeline-section-heading,
+.timeline-date,
+.timeline-date form {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.timeline-heading {
+  margin-block: 1.5rem;
+}
+.timeline-live {
+  color: var(--accent);
+  font-weight: 600;
+}
+.timeline-scale {
+  position: relative;
+  height: calc(var(--timeline-hours, 16) * 44px);
+  margin: 0;
+  background: var(--surface);
+}
+.timeline-hour {
+  position: absolute;
+  width: 100%;
+  height: 44px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  background: linear-gradient(
+    to bottom,
+    transparent calc(50% - 0.5px),
+    color-mix(in srgb, var(--border) 30%, transparent) 50%,
+    transparent calc(50% + 0.5px)
+  );
+}
+.timeline-hour > span {
+  position: absolute;
+  top: -0.65rem;
+  padding-inline: 0.5rem;
+  background: var(--surface);
+  font-size: 0.65rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.timeline-block {
+  position: absolute;
+  left: 5px;
+  right: 5px;
+  min-height: 5px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--label-color) 20%, white);
+  border-left: 3px solid var(--label-color);
+  background: color-mix(in srgb, var(--label-color) 16%, white);
+  color: var(--text);
+  padding: 5px 7px;
+  border-radius: 5px;
+  text-decoration: none;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  z-index: 2;
+  box-shadow: 0 1px 1px rgb(0 0 0 / 3%);
+}
+.timeline-block:hover {
+  background: color-mix(in srgb, var(--label-color) 23%, white);
+  color: var(--text);
+  box-shadow: 0 2px 5px rgb(0 0 0 / 9%);
+}
+.timeline-block strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.timeline-block-label {
+  color: var(--label-color);
+}
+.timeline-block-time {
+  opacity: 0.7;
+  font-size: 0.65rem;
+}
+.timeline-block-duration {
+  margin-top: 3px;
+  font-variant-numeric: tabular-nums;
+}
+.timeline-block.is-short {
+  padding-block: 0;
+}
+.timeline-block.is-short span {
+  display: none;
+}
+.timeline-block.is-running {
+  border-style: dashed;
+  border-left-style: solid;
+}
+.timeline-slot {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.7rem;
+}
+.timeline-slot span {
+  opacity: 0;
+}
+.timeline-slot:hover,
+.timeline-slot:focus-visible {
+  background: var(--accent-soft);
+}
+.timeline-slot:hover span,
+.timeline-slot:focus-visible span {
+  opacity: 1;
+}
+.timeline-now {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent);
+  z-index: 3;
+  pointer-events: none;
+}
+.timeline-now::before {
+  content: "";
+  position: absolute;
+  left: -3px;
+  top: -3px;
+  width: 8px;
+  height: 8px;
+  background: var(--accent);
+  border-radius: 50%;
+}
+.timeline-now span {
+  position: absolute;
+  right: 4px;
+  bottom: 3px;
+  padding: 1px 4px;
+  background: var(--surface);
+  color: var(--accent);
+  font-size: 0.65rem;
+  font-variant-numeric: tabular-nums;
+  border-radius: 3px;
+}
+.timeline-block strong,
+.timeline-block span {
+  display: block;
+}
+.timeline-goal span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.timeline-goal progress {
+  width: 100%;
+  height: 4px;
+  accent-color: var(--accent);
+  margin-block: 4px 0;
+}
+#timeline-page details {
+  margin-block: 0.75rem;
+}
+#timeline-page summary {
+  cursor: pointer;
+}
+.timeline-error {
+  background: var(--danger-soft);
+  color: var(--danger);
+  padding: 1rem;
+  border-radius: 8px;
+}
+.tracking-controls {
+  display: grid;
+  gap: 0.5rem;
+  margin-block: 0.75rem 1rem;
+}
+.tracking-controls form,
+.day-timeline form {
+  display: grid;
+  gap: 0.75rem;
+  margin-block: 0.75rem;
+}
+.tracking-controls details,
+.day-timeline details {
+  margin-block: 0.75rem;
+}
+.tracking-controls summary,
+.day-timeline summary {
+  cursor: pointer;
+}
+.timeline-goal-progress {
+  margin-top: 0.25rem;
+}
+.week-timelines {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(155px, 1fr));
+  grid-template-rows: 66px auto 1fr;
+  gap: 0;
+  overflow-x: auto;
+  padding: 0 0 1px;
+  align-items: stretch;
+  overscroll-behavior-inline: contain;
+  border: 1px solid var(--border);
+  border-radius: var(--panel-radius);
+  background: var(--surface);
+}
+.week-timelines > .schedule-day {
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: 1 / span 3;
+  align-content: start;
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-right: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--surface);
+}
+.week-timelines > .schedule-day:last-child {
+  border-right: 0;
+}
+.week-timelines .schedule-day-heading {
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--border);
+  margin: 0;
+}
+.week-timelines .schedule-day-heading h3 {
+  font-size: 0.75rem;
+  gap: 4px;
+}
+.week-timelines .today-label {
+  display: none;
+}
+.week-timelines .schedule-day:has(.is-today) .schedule-day-heading {
+  background: var(--accent-soft);
+}
+.week-timelines .schedule-day:has(.is-today) .schedule-day-heading time {
+  color: var(--accent);
+}
+.week-timelines .day-create-button {
+  width: 26px;
+  height: 26px;
+  min-height: 26px;
+  border: 0;
+  background: transparent;
+}
+.week-timelines .schedule-day-heading time > span {
+  display: block;
+}
+.week-timelines .schedule-day-heading {
+  min-height: 54px;
+}
+.week-timelines .day-date {
+  margin-left: 0;
+}
+.week-timelines .schedule-day-heading h3 {
+  flex-wrap: wrap;
+}
+.week-timelines .day-cards {
+  overflow-y: auto;
+  min-height: 0;
+  margin: 0;
+  padding: 8px;
+  align-content: start;
+  max-height: 120px;
+}
+.week-timelines .log-card {
+  padding: 5px;
+  gap: 4px;
+  box-shadow: none;
+}
+.week-timelines .log-card .item-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+}
+.week-timelines .log-actions {
+  display: flex;
+  flex-direction: column;
+}
+.week-timelines .log-actions > a {
+  padding: 3px;
+}
+.week-timelines .log-card h4 {
+  font-size: 0.72rem;
+}
+.week-timelines .log-card p,
+.week-timelines .log-kind {
+  font-size: 0.65rem;
+}
+.week-timelines .timeline-section-heading {
+  padding: 4px 8px;
+  height: 24px;
+}
+.timeline-section-heading {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+.week-timelines .timeline-section-heading {
+  gap: 0.25rem;
+  font-size: 0.8rem;
+}
+.day-timeline .timeline-section-heading h3 {
+  margin: 0;
+}
+.today-timeline .day-timeline {
+  border: 1px solid var(--border);
+  border-radius: var(--panel-radius);
+  background: var(--surface);
+  padding: 0;
+  margin-top: 1rem;
+}
+.day-timeline .timeline-scale {
+  margin-top: 0;
+}
+.day-timer-controls {
+  --timer-control-size: 30px;
+  height: 72px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.day-timer-controls strong {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8rem;
+}
+.timeline-goal h3 a {
+  font: inherit;
+  text-decoration: none;
+}
+.timeline-goal h3 a:hover {
+  text-decoration: underline;
+}
+.timeline-goal span {
+  font-size: 0.7rem;
+}
+.day-timer-controls .day-timer-start {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+}
+.day-timer-start label {
+  flex: 1;
+  min-width: 0;
+  display: block;
+  gap: 0;
+}
+.day-timer-start select {
+  min-height: var(--timer-control-size);
+  height: var(--timer-control-size);
+  font-size: 0.72rem;
+  padding: 4px 24px 4px 6px;
+  background-position: right 6px center;
+  border-color: var(--border);
+}
+.day-timer-controls button {
+  min-height: var(--timer-control-size);
+  height: var(--timer-control-size);
+  width: var(--timer-control-size);
+  padding: 0;
+  font-size: 0.7rem;
+  appearance: none;
+  box-shadow: none;
+  flex-shrink: 0;
+}
+.day-timer-controls :is(select, button) {
+  box-sizing: border-box;
+  height: var(--timer-control-size);
+  min-height: var(--timer-control-size);
+  max-height: var(--timer-control-size);
+  border-width: 1px;
+  line-height: 20px;
+  outline: none;
+  box-shadow: none;
+}
+.day-timer-controls :is(select, button):focus-visible {
+  outline: none;
+  border-color: var(--accent);
+}
+.day-timer-controls .timeline-play:focus-visible {
+  background: var(--accent-hover);
+}
+.day-timer-running {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+.day-timer-running form {
+  margin: 0 0 0 auto;
+}
+.timeline-hint {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+.week-timelines .timeline-hour > span {
+  display: none;
+}
+.has-hour-labels .timeline-scale {
+  margin-left: 44px;
+}
+.has-hour-labels .timeline-hour > span {
+  display: block;
+  left: -44px;
+}
+.has-hour-labels .timeline-slot {
+  left: 0;
+}
+.today-timeline .timeline-section-heading {
+  padding: 10px 14px;
+}
+.today-timeline .day-timer-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: 52px;
+  padding: 8px 14px;
+}
+.today-timeline .day-timer-start {
+  width: 260px;
+  height: var(--timer-control-size);
+}
+.today-timeline .day-timer-running {
+  margin: 0;
+  min-width: 150px;
+}
+.today-timeline .timeline-block {
+  left: 10px;
+  right: 12px;
+  font-size: 0.8rem;
+}
+@media (max-width: 800px) {
+  .timeline-date {
+    gap: 0.5rem;
+  }
+  .today-timeline .day-timer-controls {
+    height: auto;
+    min-height: 52px;
+    flex-wrap: wrap;
+  }
+}
+
 :root {
   /* Open Props 1.7.23 is vendored alongside this stylesheet (MIT). */
   --surface: #fff;
@@ -126,6 +570,9 @@ summary:focus-visible,
 [tabindex]:focus-visible {
   outline: var(--border-size-2) solid var(--accent);
   outline-offset: var(--size-1);
+}
+select:focus-visible {
+  outline-offset: 0;
 }
 main {
   padding: var(--size-8) var(--size-7);
@@ -315,6 +762,11 @@ footer {
 }
 .stats-section > h2 {
   margin-bottom: var(--size-3);
+}
+.stats-page > .stats-section + .stats-section {
+  margin-top: var(--size-6);
+  padding-top: var(--size-6);
+  border-top: var(--border-size-1) solid var(--border);
 }
 .stats strong {
   display: block;
@@ -645,6 +1097,55 @@ tbody tr:hover {
 }
 .create-menu-items a:hover {
   background: var(--accent-soft);
+}
+.time-dialog-timer-section {
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--size-4);
+  padding-bottom: var(--size-4);
+}
+.time-dialog-timer-section h3 {
+  margin: 0 0 var(--size-2);
+  color: var(--muted);
+  font-size: var(--font-size-0);
+}
+.time-dialog-timer {
+  --timer-control-size: var(--control-size);
+  display: flex;
+  align-items: center;
+  gap: var(--size-3);
+  flex-wrap: wrap;
+  height: auto;
+  padding: 0;
+  border: 0;
+}
+.time-dialog-timer .day-timer-start select {
+  font-size: var(--font-size-small);
+  padding: 0 var(--size-8) 0 var(--size-3);
+  background-position: right var(--size-3) center;
+  border-color: var(--field-border);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 5%);
+}
+.time-dialog-timer .day-timer-start select:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+.time-dialog-timer .day-timer-start {
+  gap: var(--size-2);
+}
+.time-dialog-timer button {
+  font-size: var(--font-size-small);
+}
+.time-dialog-timer form {
+  margin: 0;
+}
+.time-dialog-timer .day-timer-start {
+  flex: 1;
+  min-width: 180px;
+}
+.time-dialog-timer .day-timer-running {
+  margin: 0;
+  gap: var(--size-2);
 }
 .schedule-day {
   margin-block: 0 var(--size-7);

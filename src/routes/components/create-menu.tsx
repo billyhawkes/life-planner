@@ -12,6 +12,8 @@ export const CreateMenu = ({
   const menuId = `create-menu-items${suffix}`;
   const workoutUrl = `${viewUrl(options)}&new=${date ?? "true"}`;
   const habitUrl = workoutUrl.replace("/workouts?", "/habits/new?");
+  const goalUrl = `${viewUrl(options).replace("/workouts?", "/timeline/goals/new?")}&planner=true&day=${date ?? ""}`;
+  const timeUrl = `${viewUrl(options).replace("/workouts?", "/timeline/blocks/new?")}&planner=true&day=${date ?? ""}`;
   return (
     <div class="create-menu">
       <button
@@ -60,6 +62,20 @@ export const CreateMenu = ({
           data-on:click__prevent={`@get('${habitUrl}')`}
         >
           <Icon name="habit" /> Habit
+        </a>
+        <a
+          id={`add-goal${suffix}`}
+          href={goalUrl}
+          data-on:click__prevent={`@get('${goalUrl}')`}
+        >
+          <Icon name="target" /> Goal
+        </a>
+        <a
+          id={`add-time${suffix}`}
+          href={timeUrl}
+          data-on:click__prevent={`@get('${timeUrl}')`}
+        >
+          <Icon name="clock" /> Time
         </a>
       </nav>
     </div>

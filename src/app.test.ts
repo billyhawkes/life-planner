@@ -9,6 +9,7 @@ import { applicationRoutes } from "@/app";
 import { DatabaseTest } from "@/db";
 import { Workouts } from "@/services/workouts";
 import { Habits } from "@/services/habits";
+import { Timeline } from "@/services/timeline";
 import { dateKey, localDateTime } from "@/services/workouts/helpers";
 
 describe.skipIf(!process.env.TEST_DATABASE_URL)(
@@ -22,6 +23,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
             const sql = yield* SqlClient.SqlClient;
             const workouts = yield* Workouts;
             const habits = yield* Habits;
+            const timeline = yield* Timeline;
             const activityType = `http-test-${crypto.randomUUID()}`;
             yield* Effect.addFinalizer(() =>
               sql`DELETE FROM workouts WHERE activity_type = ${activityType}`.pipe(
@@ -40,6 +42,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
                   Layer.mergeAll(
                     Layer.succeed(Workouts, workouts),
                     Layer.succeed(Habits, habits),
+                    Layer.succeed(Timeline, timeline),
                     Layer.succeed(SqlClient.SqlClient, sql),
                   ),
                 ),
@@ -55,6 +58,216 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
               );
 
             const root = yield* request("/");
+            const timelinePage = yield* request("/timeline?day=2026-01-01");
+            expect(timelinePage.status).toBe(200);
+            expect(yield* Effect.promise(() => timelinePage.text())).toContain(
+              'id="timeline-page"',
+            );
+            const timelinePatch = yield* request("/timeline?day=2026-01-01", {
+              headers: { "Datastar-Request": "true" },
+            });
+            expect(timelinePatch.headers.get("content-type")).toContain(
+              "text/event-stream",
+            );
+            expect(yield* Effect.promise(() => timelinePatch.text())).toContain(
+              'id="goal-form"',
+            );
+            const timeLabelName = `time-http-${crypto.randomUUID()}`;
+            yield* Effect.addFinalizer(() =>
+              Effect.gen(function* () {
+                yield* sql`DELETE FROM time_blocks WHERE label_id IN (SELECT id FROM time_labels WHERE name = ${timeLabelName})`;
+                yield* sql`DELETE FROM time_labels WHERE name = ${timeLabelName}`;
+              }).pipe(Effect.orDie),
+            );
+            const timeLabelResponse = yield* request("/timeline/labels", {
+              method: "POST",
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              body: new URLSearchParams({
+                name: timeLabelName,
+                goalMinutes: "30",
+                color: "#15803d",
+                day: "2026-01-01",
+              }),
+            });
+            expect(timeLabelResponse.status).toBe(303);
+            const timeLabel = (yield* timeline.listLabels({})).find(
+              (label) => label.name === timeLabelName,
+            )!;
+            const goalDialog = yield* request(
+              `/timeline/goals/new?view=week&planner=true&edit=${timeLabel.id}`,
+              { headers: { "Datastar-Request": "true" } },
+            );
+            expect(goalDialog.headers.get("content-type")).toContain(
+              "text/event-stream",
+            );
+            const goalDialogHtml = yield* Effect.promise(() =>
+              goalDialog.text(),
+            );
+            expect(goalDialogHtml).toContain('<dialog id="goal-dialog"');
+            expect(goalDialogHtml).toContain('name="weeklyGoalMinutes"');
+            expect(goalDialogHtml).toContain('name="planner" value="true"');
+            const nativeGoalDialog = yield* request(
+              "/timeline/goals/new?view=week&planner=true",
+            );
+            expect(nativeGoalDialog.status).toBe(200);
+            expect(
+              yield* Effect.promise(() => nativeGoalDialog.text()),
+            ).toContain('<dialog id="goal-dialog"');
+            const timeBlockResponse = yield* request("/timeline/blocks", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Datastar-Request": "true",
+              },
+              body: new URLSearchParams({
+                labelId: timeLabel.id,
+                startTime: "2019-01-01T09:00",
+                endTime: "2019-01-01T10:00",
+                day: "2019-01-01",
+              }),
+            });
+            expect(timeBlockResponse.headers.get("content-type")).toContain(
+              "text/event-stream",
+            );
+            expect(
+              yield* Effect.promise(() => timeBlockResponse.text()),
+            ).toContain("1h 0m tracked");
+            const persistedBlock = (yield* timeline.listBlocks({})).find(
+              (block) => block.labelId === timeLabel.id,
+            )!;
+            const blockDialogResponse = yield* request(
+              `/timeline/blocks/new?view=week&planner=true&day=2019-01-01&edit=${persistedBlock.id}`,
+              { headers: { "Datastar-Request": "true" } },
+            );
+            expect(blockDialogResponse.headers.get("content-type")).toContain(
+              "text/event-stream",
+            );
+            const blockDialogHtml = yield* Effect.promise(() =>
+              blockDialogResponse.text(),
+            );
+            expect(blockDialogHtml).toContain('<dialog id="time-block-dialog"');
+            expect(blockDialogHtml).toContain(
+              `action="/timeline/blocks/${persistedBlock.id}"`,
+            );
+            const nativeBlockDialog = yield* request(
+              `/timeline/blocks/new?view=week&planner=true&day=2019-01-01&edit=${persistedBlock.id}`,
+            );
+            const nativeBlockHtml = yield* Effect.promise(() =>
+              nativeBlockDialog.text(),
+            );
+            expect(nativeBlockDialog.status).toBe(200);
+            expect(nativeBlockHtml.match(/id="time-block-form"/g)).toHaveLength(
+              1,
+            );
+            expect(nativeBlockHtml).toContain('<dialog id="time-block-dialog"');
+            const invalidBlockResponse = yield* request(
+              `/timeline/blocks/${persistedBlock.id}`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/x-www-form-urlencoded",
+                  "Datastar-Request": "true",
+                },
+                body: new URLSearchParams({
+                  labelId: timeLabel.id,
+                  startTime: "2019-01-01T10:00",
+                  endTime: "2019-01-01T09:00",
+                  planner: "true",
+                  view: "week",
+                  day: "2019-01-01",
+                  notes: "Keep my edits",
+                }),
+              },
+            );
+            const invalidBlockHtml = yield* Effect.promise(() =>
+              invalidBlockResponse.text(),
+            );
+            expect(invalidBlockHtml).toContain(
+              '<dialog id="time-block-dialog"',
+            );
+            expect(invalidBlockHtml).toContain("Keep my edits");
+            expect(invalidBlockHtml).toContain('role="alert"');
+            const plannerLabelResponse = yield* request(
+              `/timeline/labels/${timeLabel.id}`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/x-www-form-urlencoded",
+                  "Datastar-Request": "true",
+                },
+                body: new URLSearchParams({
+                  name: timeLabelName,
+                  goalMinutes: "0",
+                  weeklyGoalMinutes: "2400",
+                  color: "#15803d",
+                  planner: "true",
+                  view: "week",
+                }),
+              },
+            );
+            expect(plannerLabelResponse.headers.get("content-type")).toContain(
+              "text/event-stream",
+            );
+            const plannerLabelHtml = yield* Effect.promise(() =>
+              plannerLabelResponse.text(),
+            );
+            expect(plannerLabelHtml).toContain('id="dashboard"');
+            expect(plannerLabelHtml).toContain(
+              'class="daily-plans week-timelines"',
+            );
+            expect(
+              plannerLabelHtml.match(/aria-label="Daily time grid"/g),
+            ).toHaveLength(7);
+            expect(plannerLabelHtml).not.toContain(
+              'class="stats tracking-goal-list"',
+            );
+            expect(plannerLabelHtml).not.toContain("What are you working on?");
+            expect(plannerLabelHtml).toContain("Goal</a>");
+            const plannerRedirect = yield* request(
+              `/timeline/labels/${timeLabel.id}`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/x-www-form-urlencoded",
+                },
+                body: new URLSearchParams({
+                  name: timeLabelName,
+                  goalMinutes: "0",
+                  weeklyGoalMinutes: "2400",
+                  color: "#15803d",
+                  planner: "true",
+                  view: "week",
+                }),
+              },
+            );
+            expect(plannerRedirect.status).toBe(303);
+            expect(plannerRedirect.headers.get("location")).toContain(
+              "/workouts?view=week",
+            );
+            const invalidWeeklyGoal = yield* request(
+              `/timeline/labels/${timeLabel.id}`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/x-www-form-urlencoded",
+                  "Datastar-Request": "true",
+                },
+                body: new URLSearchParams({
+                  name: timeLabelName,
+                  goalMinutes: "0",
+                  weeklyGoalMinutes: "10081",
+                  color: "#15803d",
+                  planner: "true",
+                  view: "week",
+                }),
+              },
+            );
+            const invalidWeeklyHtml = yield* Effect.promise(() =>
+              invalidWeeklyGoal.text(),
+            );
+            expect(invalidWeeklyHtml).toContain('id="dashboard"');
+            expect(invalidWeeklyHtml).toContain('role="alert"');
+            expect(invalidWeeklyHtml).toContain('value="10081"');
             expect(root.status).toBe(303);
             expect(root.headers.get("location")).toBe("/workouts");
             const page = yield* request("/workouts?view=week");
@@ -67,6 +280,14 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
             const statsHtml = yield* Effect.promise(() => stats.text());
             expect(statsHtml).toContain("Workout overview</h2>");
             expect(statsHtml).toContain("Training trends</h3>");
+            expect(statsHtml).toContain('id="time-goals-title"');
+            expect(statsHtml.indexOf('id="time-goals-title"')).toBeLessThan(
+              statsHtml.indexOf('id="workout-overview-title"'),
+            );
+            expect(statsHtml).toContain('class="stats-page"');
+            expect(statsHtml).toContain('class="stats tracking-goal-list"');
+            expect(statsHtml).toContain("of 40h 0m weekly goal");
+            expect(statsHtml).toContain("/timeline/goals/new?view=stats");
             expect(statsHtml).not.toContain("All workouts");
             const formPage = yield* request("/workouts?view=week&new=true", {
               headers: { "Datastar-Request": "true" },
@@ -480,9 +701,11 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
           }).pipe(
             Effect.scoped,
             Effect.provide(
-              Layer.merge(Workouts.baseLayer, Habits.baseLayer).pipe(
-                Layer.provideMerge(DatabaseTest),
-              ),
+              Layer.mergeAll(
+                Workouts.baseLayer,
+                Habits.baseLayer,
+                Timeline.baseLayer,
+              ).pipe(Layer.provideMerge(DatabaseTest)),
             ),
             Effect.provide(BunServices.layer),
           ),
