@@ -4,6 +4,7 @@ const APP_SHELL = [
   OFFLINE_PAGE,
   "/open-props-1.7.23.min.css",
   "/styles.css",
+  "/open-sans-latin.woff2",
   "/dialogs.js",
   "/charts.js",
   "/datastar.js",
@@ -67,7 +68,11 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (["style", "script", "image", "manifest"].includes(request.destination)) {
+  if (
+    ["style", "script", "image", "manifest", "font"].includes(
+      request.destination,
+    )
+  ) {
     event.respondWith(
       caches
         .match(request)

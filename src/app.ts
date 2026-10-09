@@ -22,15 +22,17 @@ import icon180 from "../public/icon-180.png" with { type: "file" };
 import icon192 from "../public/icon-192.png" with { type: "file" };
 import icon512 from "../public/icon-512.png" with { type: "file" };
 import iconSvg from "../public/icon.svg" with { type: "text" };
+import openSans from "../public/open-sans-latin.woff2" with { type: "file" };
 import manifest from "../public/manifest.webmanifest" with { type: "text" };
 import pwa from "../public/pwa.js" with { type: "text" };
 import serviceWorker from "../public/service-worker.js" with { type: "text" };
 
-const [icon180Bytes, icon192Bytes, icon512Bytes] = await Promise.all(
-  [icon180, icon192, icon512].map((path) =>
-    readFile(new URL(path, import.meta.url)),
-  ),
-);
+const [icon180Bytes, icon192Bytes, icon512Bytes, openSansBytes] =
+  await Promise.all(
+    [icon180, icon192, icon512, openSans].map((path) =>
+      readFile(new URL(path, import.meta.url)),
+    ),
+  );
 
 const ready = Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;
@@ -77,6 +79,14 @@ export const applicationRoutes = Layer.mergeAll(
     HttpServerResponse.text(dialogs, { contentType: "text/javascript" }),
   ),
   HttpRouter.add("GET", "/api/health", ready),
+  HttpRouter.add(
+    "GET",
+    "/open-sans-latin.woff2",
+    HttpServerResponse.uint8Array(openSansBytes, {
+      contentType: "font/woff2",
+      headers: { "Cache-Control": "public, max-age=31536000, immutable" },
+    }),
+  ),
   HttpRouter.add(
     "GET",
     "/icon.svg",

@@ -588,6 +588,14 @@
   }
 }
 
+@font-face {
+  font-family: "Open Sans";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/open-sans-latin.woff2") format("woff2");
+}
+
 :root {
   /* Open Props 1.7.23 is vendored alongside this stylesheet (MIT). */
   --surface: #fff;
@@ -605,6 +613,7 @@
   --chart-color: var(--blue-8);
   --backdrop: color-mix(in srgb, var(--stone-12) 45%, transparent);
   --font-size-small: calc((var(--font-size-0) + var(--font-size-1)) / 2);
+  --font-ui: "Open Sans", var(--font-system-ui);
   --control-size: 40px;
   --control-radius: 8px;
   --panel-radius: 12px;
@@ -614,7 +623,7 @@
   --shadow-color: 220 3% 15%;
   --shadow-strength: 1%;
   color-scheme: light;
-  font-family: var(--font-system-ui);
+  font-family: var(--font-ui);
   font-size: var(--font-size-1);
   color: var(--text);
   background: var(--canvas);
@@ -732,7 +741,7 @@ main {
 }
 h1,
 h2 {
-  font-family: var(--font-system-ui);
+  font-family: var(--font-ui);
   font-weight: var(--font-weight-6);
   letter-spacing: -0.025em;
   line-height: var(--font-lineheight-1);
@@ -824,44 +833,28 @@ footer {
   grid-template-columns: auto minmax(0, 1fr);
   gap: var(--size-3);
   border-bottom: var(--border-size-1) solid var(--border);
-  padding: 8px 16px;
+  padding: 8px var(--size-7);
   margin: 0;
   background: var(--surface);
   flex-shrink: 0;
 }
 .planner-topbar .tabs {
   height: var(--control-size);
-  align-items: center;
   margin: 0;
-  border: 0;
-  gap: 2px;
-  padding: 2px;
-  background: var(--canvas);
-  border-radius: 10px;
 }
 .planner-topbar .tabs > a,
 .planner-topbar .tabs > .create-menu > button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: calc(var(--control-size) - 4px);
-  min-height: calc(var(--control-size) - 4px);
+  height: calc(var(--control-size) - 6px);
+  min-height: calc(var(--control-size) - 6px);
   padding: 0 10px;
-  border-radius: 7px;
 }
 .planner-topbar .tabs > .create-menu > button {
   background: transparent;
   border-color: transparent;
-  color: var(--muted);
 }
 .planner-topbar .tabs > .create-menu > button:hover {
   background: var(--accent-soft);
   color: var(--accent-hover);
-}
-.planner-topbar .tabs a.active {
-  color: var(--text);
-  background: var(--surface);
-  box-shadow: 0 1px 3px rgb(20 30 40 / 8%);
 }
 .planner-topbar-actions {
   display: flex;
@@ -996,16 +989,24 @@ footer {
   flex-wrap: wrap;
   gap: var(--size-1);
 }
-.pills a {
+.pills a,
+.planner-topbar .tabs > a,
+.planner-topbar .tabs > .create-menu > button {
   display: inline-flex;
   align-items: center;
-  min-height: var(--control-size);
-  padding: var(--size-2) var(--size-3);
+  justify-content: center;
   border-radius: var(--control-radius);
   text-decoration: none;
   font-size: var(--font-size-small);
+  color: var(--accent);
 }
-.pills .active {
+.pills a {
+  min-height: var(--control-size);
+  padding: var(--size-2) var(--size-3);
+}
+.pills .active,
+.planner-topbar .tabs > a.active {
+  color: var(--accent);
   background: var(--accent-soft);
 }
 .card.training-chart {
@@ -1029,9 +1030,12 @@ footer {
   flex-wrap: wrap;
   gap: var(--size-2);
 }
-.chart-controls .pills {
+.chart-controls .pills,
+.planner-topbar .tabs {
   border: var(--border-size-1) solid var(--border);
   border-radius: var(--control-radius);
+  background: var(--surface);
+  align-items: center;
   padding: 2px;
   gap: 2px;
 }
@@ -1062,7 +1066,7 @@ footer {
 }
 .chart text {
   fill: var(--muted);
-  font-family: var(--font-system-ui);
+  font-family: var(--font-ui);
   font-size: var(--font-size-0);
 }
 .grid-line {
@@ -1949,7 +1953,7 @@ html:has(dialog:modal) {
   .planner-topbar {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--size-3);
-    padding: 8px 12px;
+    padding: 8px var(--size-3);
   }
   .planner-content {
     padding: var(--size-3);

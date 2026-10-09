@@ -21,6 +21,13 @@ export const renderDocument = (body: Html) =>
           <link rel="manifest" href="/manifest.webmanifest" />
           <link rel="icon" type="image/svg+xml" href="/icon.svg" />
           <link rel="apple-touch-icon" href="/icon-180.png" />
+          <link
+            rel="preload"
+            href="/open-sans-latin.woff2"
+            as="font"
+            type="font/woff2"
+            crossorigin="anonymous"
+          />
           <link rel="stylesheet" href="/open-props-1.7.23.min.css" />
           <link rel="stylesheet" href={stylesUrl} />
           <script type="module" src="/dialogs.js" />

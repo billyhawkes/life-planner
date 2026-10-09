@@ -5,6 +5,11 @@ import { stylesUrl, timelineUrl } from "@/lib/static-assets";
 import { renderDocument } from "./document";
 
 describe("renderDocument", () => {
+  it("preloads the self-hosted Open Sans font", () => {
+    expect(renderDocument(html`<main>Planner</main>`).value).toContain(
+      'rel="preload" href="/open-sans-latin.woff2" as="font" type="font/woff2" crossorigin="anonymous"',
+    );
+  });
   it("loads fingerprinted calendar drag interactions", () => {
     expect(timelineUrl).toMatch(/^\/timeline\.js\?v=[a-z0-9]+$/);
     expect(renderDocument(html`<main>Planner</main>`).value).toContain(
