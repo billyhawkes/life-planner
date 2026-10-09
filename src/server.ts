@@ -3,6 +3,8 @@ import { Config, Effect, Layer } from "effect";
 import { HttpRouter } from "effect/http";
 import { AppLive } from "@/app";
 
+process.env.TZ ??= "America/New_York";
+
 const ServerLive = Layer.unwrap(
   Config.Port("PORT").pipe(
     Config.withDefault(3000),

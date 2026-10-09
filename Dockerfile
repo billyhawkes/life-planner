@@ -13,5 +13,6 @@ COPY --from=build --chown=bun:bun /app/dist ./
 USER bun
 ENV PORT=3000
 ENV NODE_ENV=production
+ENV TZ=America/New_York
 EXPOSE 3000
 CMD ["bun", "server.js"]

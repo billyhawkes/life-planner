@@ -45,6 +45,7 @@ workers previously installed on another origin.
 | `DATABASE_URL`      | PostgreSQL connection for the app and importer               |
 | `PORT`              | HTTP port; defaults to `3000`; `bun run dev` sets `3010`     |
 | `SITE_URL`          | MCP's loopback API URL; defaults to `http://localhost:$PORT` |
+| `TZ`                | Calendar timezone; defaults to `America/New_York` (EST/EDT)  |
 | `TEST_DATABASE_URL` | Separate PostgreSQL database for integration tests           |
 
 For a production build:
