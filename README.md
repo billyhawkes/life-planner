@@ -118,7 +118,7 @@ than modifying a migration that has already run.
 
 ```sh
 bun run test
-bun type:check
+bun check
 bun lint
 bun fmt
 bun run build

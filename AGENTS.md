@@ -107,7 +107,7 @@ Service methods should accept object inputs, scope by the current user or tenant
 Run checks after code changes when practical:
 
 - `bun run test`
-- `bun type:check`
+- `bun check` (Bun 1.4.3)
 - `bun lint`
 - `bun fmt`
 
