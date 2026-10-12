@@ -1,4 +1,17 @@
 const icons = {
+  menu: <path d="M4 6h16M4 12h16M4 18h16" />,
+  calendar: (
+    <>
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M16 3v4M8 3v4M3 11h18" />
+    </>
+  ),
+  week: (
+    <>
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M3 9h18M9 9v12M15 9v12" />
+    </>
+  ),
   search: (
     <>
       <path d="m21 21-4.5-4.5" />

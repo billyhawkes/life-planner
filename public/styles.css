@@ -830,7 +830,7 @@ footer {
 .planner-topbar {
   --control-size: 40px;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--size-3);
   border-bottom: var(--border-size-1) solid var(--border);
   padding: 8px var(--size-7);
@@ -841,12 +841,14 @@ footer {
 .planner-topbar .tabs {
   height: var(--control-size);
   margin: 0;
+  justify-self: start;
 }
 .planner-topbar .tabs > a,
 .planner-topbar .tabs > .create-menu > button {
   height: calc(var(--control-size) - 6px);
   min-height: calc(var(--control-size) - 6px);
   padding: 0 10px;
+  gap: 6px;
 }
 .planner-topbar .tabs > .create-menu > button {
   background: transparent;
@@ -855,51 +857,6 @@ footer {
 .planner-topbar .tabs > .create-menu > button:hover {
   background: var(--accent-soft);
   color: var(--accent-hover);
-}
-.planner-topbar-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--size-3);
-  min-width: 0;
-}
-.planner-topbar-actions:empty {
-  display: none;
-}
-.planner-search {
-  display: flex;
-  flex: 1;
-  min-width: 0;
-  position: relative;
-  max-width: 260px;
-  margin: 0;
-}
-.planner-search input[type="search"] {
-  min-width: 0;
-  height: var(--control-size);
-  padding: 4px 10px 4px var(--control-size);
-  background: var(--canvas);
-  font-size: var(--font-size-small);
-}
-.search-button {
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: var(--control-size);
-  display: grid;
-  place-items: center;
-  padding: 0;
-  background: transparent;
-  border-color: transparent;
-  color: var(--muted);
-}
-.search-button:hover:not(:disabled) {
-  background: transparent;
-  border-color: transparent;
-  color: var(--accent);
-}
-.planner-topbar-actions > .create-menu {
-  margin-left: 0;
-  flex-shrink: 0;
 }
 .card {
   background: var(--surface);
@@ -967,6 +924,14 @@ footer {
 }
 .stats-section > h2 {
   margin-bottom: var(--size-3);
+}
+.menu-page {
+  width: 100%;
+  max-width: 640px;
+}
+.menu-page > h1 {
+  font-size: var(--font-size-4);
+  margin-bottom: var(--size-5);
 }
 .stats-page > .stats-section + .stats-section {
   margin-top: var(--size-6);
@@ -1942,25 +1907,132 @@ html:has(dialog:modal) {
   }
 }
 @media (max-width: 768px) {
-  .planner-topbar .tabs {
-    grid-column: 1 / -1;
-    grid-row: 1;
-    min-width: 0;
+  :root {
+    --mobile-nav-height: 64px;
+    --control-size: 44px;
+    scroll-padding-bottom: calc(
+      var(--mobile-nav-height) + env(safe-area-inset-bottom) + 16px
+    );
   }
-  .planner-search {
-    max-width: none;
+  #dashboard,
+  #timeline-page {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: calc(
+      var(--mobile-nav-height) + env(safe-area-inset-bottom)
+    );
+  }
+  #dashboard {
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+    padding-bottom: 0;
+  }
+  #dashboard > .planner-topbar {
+    position: static;
+    order: 2;
+  }
+  #dashboard > .planner-content {
+    order: 1;
+    overflow: auto;
+    overscroll-behavior: contain;
+    scroll-padding-block: var(--size-3);
+  }
+  .planner-topbar .tabs {
+    height: auto;
+    justify-self: stretch;
+    min-width: 0;
+    border: 0;
+    padding: 0;
+    border-radius: 0;
+    overflow: visible;
+    gap: 2px;
   }
   .planner-topbar {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 10;
     grid-template-columns: minmax(0, 1fr);
-    gap: var(--size-3);
-    padding: 8px var(--size-3);
+    gap: 2px;
+    min-height: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom));
+    padding: 4px max(4px, env(safe-area-inset-right))
+      calc(4px + env(safe-area-inset-bottom))
+      max(4px, env(safe-area-inset-left));
+    border-top: 1px solid var(--border);
+    border-bottom: 0;
+    box-shadow: 0 -2px 12px rgb(20 30 40 / 4%);
   }
   .planner-content {
     padding: var(--size-3);
   }
-  .planner-topbar .tabs > a {
+  .planner-topbar .tabs > a,
+  .planner-topbar .tabs > .create-menu {
     flex: 1;
-    padding-inline: var(--size-2);
+    min-width: 0;
+  }
+  .planner-topbar .tabs > a,
+  .planner-topbar .tabs > .create-menu > button {
+    height: 56px;
+    min-height: 56px;
+    padding: 4px 2px;
+    font-size: 10px;
+    color: var(--muted);
+    gap: 4px;
+    flex-direction: column;
+  }
+  .planner-topbar .tabs > .create-menu > button {
+    width: 100%;
+    flex-direction: column-reverse;
+  }
+  .planner-topbar .tabs > a > .icon {
+    display: block;
+    width: 20px;
+    height: 20px;
+  }
+  .planner-topbar .tabs > a > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  input,
+  select,
+  textarea,
+  .workout-dialog input,
+  .workout-dialog select,
+  .workout-dialog textarea {
+    font-size: 16px;
+  }
+  .day-create-button,
+  .week-timelines .day-create-button,
+  .habit-toggle,
+  .habit-control.compact .habit-toggle,
+  .completion-button,
+  .delete-button,
+  .log-card.compact .completion-button,
+  .log-card.compact .delete-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .log-actions > a,
+  .create-menu-items a {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .habit-control {
+    max-width: 100%;
+  }
+  .week-timelines {
+    grid-template-columns: repeat(7, minmax(180px, 1fr));
+  }
+  .planner-content > .daily-plans {
+    min-width: 0;
+  }
+  .form-dialog {
+    max-height: calc(
+      100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 16px
+    );
   }
   .log-card:not(.compact) {
     padding: var(--size-3);

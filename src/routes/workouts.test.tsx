@@ -35,7 +35,7 @@ describe("planner layout", () => {
     },
   );
   it.each(["today", "week", "calendar"] as const)(
-    "separates the full-width header from the %s content",
+    "separates responsive navigation from the %s content",
     (view) => {
       const page = renderDashboard(
         { view, days: [] },
@@ -43,15 +43,43 @@ describe("planner layout", () => {
       ).value;
 
       expect(page).toContain(`class="planner-page planner-view-${view}"`);
-      expect(page).toContain('</header><div class="planner-content">');
+      expect(page).toContain('</footer><div class="planner-content">');
+      expect(page).toContain('aria-label="Planner navigation"');
       expect(page).not.toContain('class="planner-brand"');
-      expect(page.indexOf('id="import-menu-trigger"')).toBeLessThan(
-        page.indexOf('class="planner-topbar-actions"'),
-      );
-      expect(page).toContain('class="planner-topbar-actions"');
+      expect(page).not.toContain('id="import-menu-trigger"');
+      expect(page).toContain("<span>Menu</span>");
+      expect(page).not.toContain('role="search"');
       expect(page).toContain('aria-label="Planner views"');
     },
   );
+
+  it("puts import on the Menu page with native and Datastar navigation", () => {
+    const page = renderDashboard(
+      { view: "menu" },
+      readOptions({ view: "menu" }),
+    ).value;
+    expect(page).toContain('class="planner-page planner-view-menu"');
+    expect(page).toContain('<h1 id="menu-title">Menu</h1>');
+    expect(page).toContain('id="menu-import-trigger"');
+    expect(page).toContain("view=menu");
+    expect(page).toContain("import=true");
+    expect(page).toContain("data-on:click__prevent=");
+    expect(page).not.toContain('class="mobile-search"');
+    expect(page).not.toContain('class="daily-plans');
+    expect(page.indexOf('id="menu-import-trigger"')).toBeGreaterThan(
+      page.indexOf("</footer>"),
+    );
+  });
+
+  it("does not render search controls, even for bookmarked search URLs", () => {
+    const page = renderDashboard(
+      { view: "today", days: [] },
+      readOptions({ view: "today", search: "Morning run" }),
+    ).value;
+    expect(page).not.toContain('class="mobile-search"');
+    expect(page).not.toContain('role="search"');
+    expect(page).toContain('aria-current="page"');
+  });
 
   it.each([28, 35, 42])(
     "sets the calendar row count for a %s-day month grid",

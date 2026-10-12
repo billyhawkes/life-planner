@@ -15,6 +15,7 @@ type TimelineData = {
   readonly blocks: readonly TimeBlock[];
 };
 export type DashboardData =
+  | { readonly view: "menu"; readonly timeline?: undefined }
   | {
       readonly view: "stats";
       readonly overview: WorkoutOverview;
@@ -29,6 +30,10 @@ export type DashboardData =
 export const loadDashboard = Effect.fn("Planner.loadDashboard")(function* (
   options: ViewOptions,
 ) {
+  if (options.view === "menu") {
+    const data: DashboardData = { view: "menu" };
+    return data;
+  }
   const workouts = yield* Workouts;
   const tracker = yield* Timeline;
   const timeline =

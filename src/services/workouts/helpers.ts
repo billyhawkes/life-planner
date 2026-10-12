@@ -1,7 +1,7 @@
 import type { Workout } from "./schema";
 
 export type ViewOptions = {
-  readonly view: "today" | "week" | "calendar" | "stats";
+  readonly view: "today" | "week" | "calendar" | "stats" | "menu";
   readonly activity: string;
   readonly metric: string;
   readonly month: string;
@@ -19,7 +19,9 @@ export const readOptions = (values: Record<string, string>): ViewOptions => ({
   view:
     values.view === "overview" || values.view === "stats"
       ? "stats"
-      : values.view === "week" || values.view === "calendar"
+      : values.view === "week" ||
+          values.view === "calendar" ||
+          values.view === "menu"
         ? values.view
         : "today",
   activity: values.activity === "cycling" ? "cycling" : "running",

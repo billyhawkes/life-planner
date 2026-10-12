@@ -29,6 +29,9 @@ describe("renderDocument", () => {
     expect(document).toContain('rel="manifest" href="/manifest.webmanifest"');
     expect(document).toContain('rel="apple-touch-icon" href="/icon-180.png"');
     expect(document).toContain('name="theme-color" content="#15803d"');
+    expect(document).toContain(
+      'content="width=device-width, initial-scale=1, viewport-fit=cover"',
+    );
   });
 
   it("uses the existing app icon as the favicon", () => {

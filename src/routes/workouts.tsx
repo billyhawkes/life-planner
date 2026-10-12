@@ -4,12 +4,10 @@ import type { DashboardData } from "@/services/planner/dashboard";
 import { PlannerCalendar } from "./components/calendar";
 import { CreateMenu } from "./components/create-menu";
 import { PlannerFeedback } from "./components/feedback";
-import { Icon } from "./components/icon";
+import { Icon, type IconName } from "./components/icon";
 import { HabitCard } from "@/services/habits/components/card";
-import { Link } from "@/services/workouts/components/links";
 import { WorkoutCard } from "@/services/workouts/components/card";
 import { TrainingChart } from "@/services/workouts/components/training-chart";
-import { ImportMenu } from "@/services/workouts/components/import-menu";
 import {
   DayTimeline,
   TimeTrackedSummary,
@@ -28,7 +26,16 @@ const plannerViews: ReadonlyArray<readonly [ViewOptions["view"], string]> = [
   ["week", "This Week"],
   ["calendar", "Calendar"],
   ["stats", "Stats"],
+  ["menu", "Menu"],
 ];
+
+const viewIcons: Record<ViewOptions["view"], IconName> = {
+  today: "sun",
+  week: "week",
+  calendar: "calendar",
+  stats: "activity",
+  menu: "menu",
+};
 
 export const renderDashboard = (
   data: DashboardData,
@@ -43,7 +50,7 @@ export const renderDashboard = (
   const compact = data.view === "calendar";
   const hours = { startHour: 0, endHour: 24 };
   const days =
-    data.view === "stats"
+    data.view === "stats" || data.view === "menu"
       ? []
       : data.days.map(({ date, workouts, habits }, index) => {
           const cards = (
@@ -127,49 +134,20 @@ export const renderDashboard = (
           }
         : {})}
     >
-      <header class="planner-topbar">
+      <footer class="planner-topbar" aria-label="Planner navigation">
         <nav class="tabs" aria-label="Planner views">
           {plannerViews.map(([view, label]) => (
-            <Link
-              label={label}
-              url={viewUrl(options, { view, page: 1 })}
-              active={data.view === view}
-            />
-          ))}
-          <ImportMenu options={options} />
-        </nav>
-        <div class="planner-topbar-actions">
-          {data.view !== "stats" ? (
-            <form
-              class="planner-search"
-              role="search"
-              method="get"
-              action="/workouts"
+            <a
+              href={viewUrl(options, { view, page: 1 })}
+              class={data.view === view ? "active" : ""}
+              aria-current={data.view === view ? "page" : undefined}
             >
-              {Object.entries(options)
-                .filter(([key]) => key !== "search")
-                .map(([key, value]) => (
-                  <input type="hidden" name={key} value={value} />
-                ))}
-              <input
-                type="search"
-                name="search"
-                value={options.search}
-                placeholder="Search plans…"
-                aria-label="Search workouts and habits"
-              />
-              <button
-                type="submit"
-                class="search-button"
-                aria-label="Search workouts and habits"
-                title="Search"
-              >
-                <Icon name="search" />
-              </button>
-            </form>
-          ) : null}
-        </div>
-      </header>
+              <Icon name={viewIcons[view]} />
+              <span>{label}</span>
+            </a>
+          ))}
+        </nav>
+      </footer>
       <div class="planner-content">
         {form}
         {habitForm}
@@ -184,7 +162,26 @@ export const renderDashboard = (
             showGoals={false}
           />
         ) : null}
-        {data.view === "stats" ? (
+        {data.view === "menu" ? (
+          <section class="menu-page" aria-labelledby="menu-title">
+            <h1 id="menu-title">Menu</h1>
+            <section class="card" aria-labelledby="menu-import-title">
+              <h2 id="menu-import-title">Import</h2>
+              <p>
+                Bring your workouts into Life Planner from an Apple Health
+                export.
+              </p>
+              <a
+                id="menu-import-trigger"
+                class="button"
+                href={`${viewUrl(options)}&import=true`}
+                data-on:click__prevent={`@get('${viewUrl(options)}&import=true')`}
+              >
+                Import Apple Health
+              </a>
+            </section>
+          </section>
+        ) : data.view === "stats" ? (
           <div class="stats-page">
             {data.timeline ? (
               <section class="stats-section" aria-labelledby="time-goals-title">
