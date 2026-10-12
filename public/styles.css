@@ -810,6 +810,9 @@ footer {
   padding: 0;
   width: 100%;
   min-width: 0;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
 }
 .planner-content {
   display: flex;
@@ -818,6 +821,9 @@ footer {
   min-width: 0;
   min-height: 0;
   padding: var(--size-5) var(--size-7);
+  overflow: auto;
+  overscroll-behavior: contain;
+  scroll-padding-block: var(--size-3);
 }
 .planner-content > * {
   flex-shrink: 0;
@@ -1922,9 +1928,6 @@ html:has(dialog:modal) {
     );
   }
   #dashboard {
-    height: 100dvh;
-    min-height: 0;
-    overflow: hidden;
     padding-bottom: 0;
   }
   #dashboard > .planner-topbar {
@@ -1933,9 +1936,6 @@ html:has(dialog:modal) {
   }
   #dashboard > .planner-content {
     order: 1;
-    overflow: auto;
-    overscroll-behavior: contain;
-    scroll-padding-block: var(--size-3);
   }
   .planner-topbar .tabs {
     height: auto;
