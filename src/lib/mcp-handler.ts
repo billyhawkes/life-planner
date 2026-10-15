@@ -1,14 +1,33 @@
-import { Layer } from "effect";
+import { Effect, Layer } from "effect";
+import { McpProtocol, McpServer } from "effect/ai";
 import { FetchHttpClient } from "effect/http";
-import { HttpApiMcp } from "@krak-stack/registry/httpapi/mcp";
+import { HttpApiAdapter } from "@krak-stack/registry/httpapi/adapter";
+import { makeHttpApiToolkit } from "@krak-stack/registry/httpapi/toolkit";
 
 import { AppApi } from "@/api";
 
-export const mcpLayer = HttpApiMcp.layerHttp({
+const adapterLayer = HttpApiAdapter.layer({
   api: AppApi,
-  path: "/api/mcp",
   baseUrl:
     process.env.SITE_URL ?? `http://localhost:${process.env.PORT ?? 3000}`,
   methods: ["get", "post", "put", "patch", "delete"],
-  toolMetaKey: "training-ledger/httpapi",
 }).pipe(Layer.provide(FetchHttpClient.layer));
+
+export const mcpLayer = Layer.effectDiscard(
+  Effect.gen(function* () {
+    const { toolkit, handlers } = yield* makeHttpApiToolkit({
+      toolMetaKey: "training-ledger/httpapi",
+    });
+    yield* McpServer.registerToolkit(toolkit).pipe(Effect.provide(handlers));
+  }),
+).pipe(
+  Layer.provideMerge(
+    McpServer.layerHttp({
+      name: "training-ledger",
+      version: "1.0.0",
+      path: "/api/mcp",
+      protocols: [McpProtocol.v2025_11_25],
+    }),
+  ),
+  Layer.provide(adapterLayer),
+);
