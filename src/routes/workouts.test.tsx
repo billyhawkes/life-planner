@@ -4,6 +4,69 @@ import { ScheduleDays } from "./components/schedule";
 import { renderDashboard } from "./workouts";
 
 describe("planner layout", () => {
+  it("shows time stats and navigation for the selected week, not Stats", () => {
+    const timeline = {
+      labels: [
+        {
+          id: "work",
+          name: "Work",
+          color: "#15803d",
+          goalType: "maximum" as const,
+          goalMinutes: 0,
+          weeklyGoalMinutes: 2400,
+        },
+      ],
+      blocks: [
+        {
+          id: "selected",
+          labelId: "work",
+          startTime: new Date("2025-12-30T09:00").toISOString(),
+          endTime: new Date("2025-12-30T11:00").toISOString(),
+          notes: "",
+        },
+        {
+          id: "other",
+          labelId: "work",
+          startTime: new Date("2026-01-05T09:00").toISOString(),
+          endTime: new Date("2026-01-05T12:00").toISOString(),
+          notes: "",
+        },
+      ],
+    };
+    const page = renderDashboard(
+      { view: "week", days: [], timeline },
+      readOptions({ view: "week", week: "2025-12-29" }),
+    ).value;
+    expect(page).toContain("Week navigation");
+    expect(page).toContain("Previous week");
+    expect(page).toContain("Next week");
+    expect(page).toContain("week=2025-12-22");
+    expect(page).toContain("week=2026-01-05");
+    expect(page).toContain("Dec 29, 2025 – Jan 4, 2026");
+    expect(page).toContain("<strong>2h/40</strong>");
+    const headerStart = page.indexOf('aria-label="Week navigation"');
+    const headerEnd = page.indexOf("</header>", headerStart);
+    const badge = page.indexOf('class="weekly-time-total"');
+    expect(badge).toBeGreaterThan(headerStart);
+    expect(badge).toBeLessThan(headerEnd);
+    expect(page).not.toContain('class="stats tracking-goal-list"');
+    expect(page).not.toContain("<strong>3h/40</strong>");
+    const stats = renderDashboard(
+      {
+        view: "stats",
+        timeline,
+        overview: {
+          completedCount: 0,
+          distanceKilometres: 0,
+          currentPace: undefined,
+          trends: [],
+        },
+      },
+      readOptions({ view: "stats" }),
+    ).value;
+    expect(stats).not.toContain("tracking-goal-list");
+    expect(stats).toContain("Workout overview");
+  });
   it.each(["today", "week"] as const)(
     "shows all 24 hours in the %s timeline",
     (view) => {

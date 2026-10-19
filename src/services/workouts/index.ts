@@ -151,12 +151,14 @@ export class Workouts extends Context.Service<Workouts>()("Workouts", {
 
     const schedule = Effect.fn("Workouts.schedule")(function* (input: {
       readonly month?: string;
+      readonly week?: string;
       readonly search?: string;
       readonly sort?: string;
     }) {
       const start = input.month
         ? new Date(`${input.month}-01T00:00`)
-        : weekRange().start;
+        : weekRange(input.week ? new Date(`${input.week}T12:00`) : undefined)
+            .start;
       if (!Number.isFinite(start.getTime()))
         return yield* new WorkoutDataError({
           message: "Invalid schedule month",

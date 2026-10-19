@@ -273,7 +273,7 @@ describe("timeline presentation and validation", () => {
     expect(today).not.toContain('class="habit-control compact ');
     expect(today).toContain('<span class="habit-name">Guitar practice</span>');
   });
-  it("renders goals using the Stats card layout with weekly time as the headline", () => {
+  it("renders slim weekly progress totals without cards or daily goals", () => {
     const html = TrackingControls({
       labels: [
         {
@@ -297,16 +297,19 @@ describe("timeline presentation and validation", () => {
       day: "2026-01-01",
       options: readOptions({ view: "week" }),
     }).value;
-    expect(html).toContain('class="stats tracking-goal-list"');
-    expect(html).toContain(
-      '<article class="card timeline-goal is-over-maximum">',
-    );
-    expect(html).toContain("<strong>2h 0m</strong>");
-    expect(html).toContain("of 40h 0m weekly maximum");
-    expect(html).toContain("Daily: 2h 0m / 1h 0m");
-    expect(html).toContain("5%</span>");
-    expect(html).toContain("200%</span>");
-    expect(html).toContain("1h 0m over maximum");
+    expect(html).toContain('class="tracking-goal-list"');
+    expect(html).not.toContain('class="stats ');
+    expect(html).toContain('class="weekly-time-total"');
+    expect(html).not.toContain('class="card');
+    expect(html).toContain('class="weekly-time-progress"');
+    expect(html).toContain('max="2400" value="120"');
+    expect(html).toContain('aria-label="Work weekly goal"');
+    expect(html).toContain("<strong>2h/40</strong>");
+    expect(html).not.toContain("weekly maximum");
+    expect(html).not.toContain("Daily:");
+    expect(html).not.toContain("5%");
+    expect(html).not.toContain("200%</span>");
+    expect(html).toContain("38h 0m available");
     expect(html).toContain("/timeline/goals/new?view=week");
   });
   it("uses shared daytime hours without hiding early or overnight entries", () => {

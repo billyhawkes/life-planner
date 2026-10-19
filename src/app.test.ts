@@ -486,9 +486,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
             expect(
               plannerLabelHtml.match(/aria-label="Daily time grid"/g),
             ).toHaveLength(7);
-            expect(plannerLabelHtml).not.toContain(
-              'class="stats tracking-goal-list"',
-            );
+            expect(plannerLabelHtml).toContain('class="tracking-goal-list"');
             expect(plannerLabelHtml).not.toContain("What are you working on?");
             expect(plannerLabelHtml).toContain("Goal</a>");
             const plannerRedirect = yield* request(
@@ -540,22 +538,34 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
             expect(root.headers.get("location")).toBe("/workouts");
             const page = yield* request("/workouts?view=week");
             expect(page.status).toBe(200);
-            expect(yield* Effect.promise(() => page.text())).toContain(
-              'id="dashboard"',
+            const weekStatsHtml = yield* Effect.promise(() => page.text());
+            expect(weekStatsHtml).toContain('id="dashboard"');
+            expect(weekStatsHtml).toContain('class="tracking-goal-list"');
+            expect(weekStatsHtml).toContain("h/40</strong>");
+            expect(weekStatsHtml).toContain("/timeline/goals/new?view=week");
+            expect(weekStatsHtml).toContain("Previous week");
+            const pastWeek = yield* request(
+              "/workouts?view=week&week=2025-12-29",
             );
+            const pastWeekHtml = yield* Effect.promise(() => pastWeek.text());
+            expect(pastWeekHtml).toContain(
+              'id="create-menu-trigger-2025-12-29"',
+            );
+            expect(pastWeekHtml).toContain(
+              'id="create-menu-trigger-2026-01-04"',
+            );
+            expect(pastWeekHtml).not.toContain(
+              'id="create-menu-trigger-2026-01-05"',
+            );
+            expect(pastWeekHtml).toContain("week=2025-12-29");
             const stats = yield* request("/workouts?view=stats");
             expect(stats.status).toBe(200);
             const statsHtml = yield* Effect.promise(() => stats.text());
             expect(statsHtml).toContain("Workout overview</h2>");
             expect(statsHtml).toContain("Training trends</h3>");
-            expect(statsHtml).toContain('id="time-goals-title"');
-            expect(statsHtml.indexOf('id="time-goals-title"')).toBeLessThan(
-              statsHtml.indexOf('id="workout-overview-title"'),
-            );
+            expect(statsHtml).not.toContain('id="time-goals-title"');
             expect(statsHtml).toContain('class="stats-page"');
-            expect(statsHtml).toContain('class="stats tracking-goal-list"');
-            expect(statsHtml).toContain("of 40h 0m weekly minimum");
-            expect(statsHtml).toContain("/timeline/goals/new?view=stats");
+            expect(statsHtml).not.toContain('class="stats tracking-goal-list"');
             expect(statsHtml).not.toContain("All workouts");
             const formPage = yield* request("/workouts?view=week&new=true", {
               headers: { "Datastar-Request": "true" },

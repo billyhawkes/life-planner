@@ -5,6 +5,7 @@ export type ViewOptions = {
   readonly activity: string;
   readonly metric: string;
   readonly month: string;
+  readonly week?: string;
   readonly search: string;
   readonly sort: string;
   readonly page: number;
@@ -29,6 +30,7 @@ export const readOptions = (values: Record<string, string>): ViewOptions => ({
   month: /^\d{4}-(0[1-9]|1[0-2])$/.test(values.month ?? "")
     ? values.month
     : dateKey(new Date()).slice(0, 7),
+  week: weekStart(values.week),
   search: values.search ?? "",
   sort: values.sort ?? "-startDate",
   page: Math.max(1, Math.min(100000, Math.floor(Number(values.page) || 1))),
@@ -44,6 +46,17 @@ export const formatPace = (value: number) => {
 };
 export const dateKey = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+export const weekStart = (value?: string) => {
+  const parsed = new Date(`${value}T12:00`);
+  const date =
+    /^\d{4}-\d{2}-\d{2}$/.test(value ?? "") &&
+    Number.isFinite(parsed.getTime()) &&
+    dateKey(parsed) === value
+      ? parsed
+      : new Date();
+  date.setDate(date.getDate() - ((date.getDay() + 6) % 7));
+  return dateKey(date);
+};
 export const localDateTime = (date: Date) =>
   `${dateKey(date)}T${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 export const formatDate = (value: string) =>

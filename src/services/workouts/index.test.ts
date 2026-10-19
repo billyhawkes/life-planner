@@ -109,6 +109,16 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
             expect(
               schedule.days.flatMap((day) => day.workouts.map((row) => row.id)),
             ).toEqual([plan.id]);
+            const selectedWeek = yield* service.schedule({
+              search: activityType,
+              week: "2025-12-31",
+            });
+            expect(selectedWeek.days).toHaveLength(7);
+            expect(selectedWeek.days[0]?.date.getFullYear()).toBe(2025);
+            expect(selectedWeek.days[0]?.date.getMonth()).toBe(11);
+            expect(selectedWeek.days[0]?.date.getDate()).toBe(29);
+            expect(selectedWeek.days[6]?.date.getDate()).toBe(4);
+            expect(selectedWeek.total).toBe(0);
             yield* migrate;
             expect(
               (yield* service.list({ activityType })).map((row) => row.id),

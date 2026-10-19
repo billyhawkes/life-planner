@@ -146,7 +146,13 @@ export const TrackingControls = ({
         </dialog>
       ) : null}
       {showGoals && labels.length ? (
-        <div class="stats tracking-goal-list">
+        <div
+          class={
+            options?.view === "week"
+              ? "tracking-goal-list"
+              : "stats tracking-goal-list"
+          }
+        >
           {labels.map((label) => {
             const matching = blocks.filter(
               (block) => block.labelId === label.id,
@@ -159,8 +165,7 @@ export const TrackingControls = ({
               0,
             );
             const weekly =
-              label.weeklyGoalMinutes > 0 ||
-              (!label.goalMinutes && options?.view === "week");
+              options?.view === "week" || label.weeklyGoalMinutes > 0;
             const minutes = weekly
               ? weeklyMinutes(matching, day, now)
               : dailyMinutes;
@@ -168,7 +173,39 @@ export const TrackingControls = ({
             const overMaximum =
               label.goalType === "maximum" &&
               ((target > 0 && minutes > target) ||
-                (label.goalMinutes > 0 && dailyMinutes > label.goalMinutes));
+                (options?.view !== "week" &&
+                  label.goalMinutes > 0 &&
+                  dailyMinutes > label.goalMinutes));
+            if (options?.view === "week") {
+              const hours = (value: number) =>
+                Math.round((value / 60) * 10) / 10;
+              return (
+                <a
+                  class={`weekly-time-total${overMaximum ? " is-over-maximum" : ""}`}
+                  href={url}
+                  data-on:click__prevent={`@get('${url}')`}
+                  title={
+                    target > 0
+                      ? status(minutes, target, label.goalType)
+                      : "Weekly tracked time"
+                  }
+                  style={`--label-color:${label.color}`}
+                >
+                  {target > 0 ? (
+                    <progress
+                      class="weekly-time-progress"
+                      max={target}
+                      value={Math.min(minutes, target)}
+                      aria-label={`${label.name} weekly goal`}
+                    />
+                  ) : null}
+                  <span>{label.name}</span>
+                  <strong>
+                    {hours(minutes)}h{target > 0 ? `/${hours(target)}` : ""}
+                  </strong>
+                </a>
+              );
+            }
             return (
               <article
                 class={`card timeline-goal${overMaximum ? " is-over-maximum" : ""}`}

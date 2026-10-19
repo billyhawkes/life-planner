@@ -56,6 +56,7 @@ export const loadDashboard = Effect.fn("Planner.loadDashboard")(function* (
   const habits = yield* Habits;
   const schedule = yield* workouts.schedule({
     month: options.view === "calendar" ? options.month : undefined,
+    week: options.view === "week" ? options.week : undefined,
     search: options.search,
     sort: options.sort,
   });
