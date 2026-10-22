@@ -1,6 +1,0 @@
-{
-  "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "ignorePatterns": ["public/datastar.js", "public/*.min.css", "dist/"],
-  "printWidth": 80,
-  "sortTailwindcss": true
-}

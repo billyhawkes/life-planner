@@ -12,7 +12,6 @@
     "preview": "NODE_ENV=production bun dist/server.js",
     "db:migrate": "bun scripts/migrate.ts",
     "lint": "oxlint",
-    "fmt": "oxfmt",
     "test": "bun test"
   },
   "dependencies": {
@@ -25,7 +24,6 @@
   "devDependencies": {
     "@types/bun": "^1.4.2",
     "@types/node": "^26.6.2",
-    "oxfmt": "^0.68.0",
     "oxlint": "^1.83.0",
     "typescript": "^7.0.2"
   },

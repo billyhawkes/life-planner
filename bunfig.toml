@@ -1,0 +1,6 @@
+[fmt]
+ignorePatterns = ["public/datastar.js", "public/*.min.css", "dist/"]
+printWidth = 80
+sortPackageJson = true
+sortTailwindcss = true
+svelte = false
