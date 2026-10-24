@@ -16,8 +16,12 @@ export const TrainingChart = ({
       ? workout.distanceKilometres!
       : workout.durationMinutes / workout.distanceKilometres!,
   );
-  const minimum = values.length ? Math.min(...values) : 0;
-  const maximum = values.length ? Math.max(...values) : 1;
+  const minimum = values.length
+    ? values.reduce((min, value) => Math.min(min, value), Infinity)
+    : 0;
+  const maximum = values.length
+    ? values.reduce((max, value) => Math.max(max, value), -Infinity)
+    : 1;
   const padding = Math.max((maximum - minimum) * 0.15, maximum * 0.05, 0.25);
   const low =
     options.metric === "distance" ? 0 : Math.max(0, minimum - padding);
@@ -50,7 +54,7 @@ export const TrainingChart = ({
           <h3>Training trends</h3>
           <p>
             {selected.length
-              ? `Latest ${selected.length} completed ${options.activity === "cycling" ? "rides" : "runs"}`
+              ? `${selected.length} completed ${options.activity === "cycling" ? "rides" : "runs"} · ${options.range === "all" ? "All time" : `Last ${options.range} days`}`
               : "Your completed sessions"}
             {options.metric === "pace"
               ? " · Lower pace is faster"
@@ -58,6 +62,22 @@ export const TrainingChart = ({
           </p>
         </div>
         <div class="chart-controls">
+          <nav class="pills" aria-label="Chart time range">
+            {(
+              [
+                ["30", "30 days"],
+                ["90", "90 days"],
+                ["365", "1 year"],
+                ["all", "All time"],
+              ] as const
+            ).map(([range, label]) => (
+              <Link
+                label={label}
+                url={viewUrl(options, { range })}
+                active={options.range === range}
+              />
+            ))}
+          </nav>
           <nav class="pills" aria-label="Chart activity">
             <Link
               label="Running"
@@ -92,7 +112,7 @@ export const TrainingChart = ({
             tabindex="0"
             viewBox="0 0 880 320"
             role="group"
-            aria-label={`${options.metric === "distance" ? "Distance" : "Pace"} across the last ${selected.length} sessions. Use left and right arrow keys to explore workouts.`}
+            aria-label={`${options.metric === "distance" ? "Distance" : "Pace"} across ${selected.length} sessions. Use left and right arrow keys to explore workouts.`}
             aria-describedby="training-chart-tooltip"
           >
             {Array.from({ length: 5 }, (_, index) => {

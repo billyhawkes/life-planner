@@ -191,7 +191,13 @@ export class Workouts extends Context.Service<Workouts>()("Workouts", {
     });
 
     const overview = Effect.fn("Workouts.overview")(
-      function* ({ activityType }: { readonly activityType: string }) {
+      function* ({
+        activityType,
+        after,
+      }: {
+        readonly activityType: string;
+        readonly after?: string;
+      }) {
         const now = new Date();
         const { start, end } = weekRange(now);
         const [totals] = yield* sql<{
@@ -205,18 +211,17 @@ export class Workouts extends Context.Service<Workouts>()("Workouts", {
         }>`SELECT duration_minutes / distance_kilometres AS pace FROM workouts
       WHERE status = 'completed' AND activity_type = 'Running' AND distance_kilometres > 0 AND start_date <= ${now.toISOString()}::timestamptz
       ORDER BY start_date DESC, id ASC LIMIT 1`;
-        const recent = yield* sql<{
+        const trends = yield* sql<{
           workout: unknown;
         }>`SELECT ${columns} FROM workouts
       WHERE status = 'completed' AND activity_type = ${activityType} AND distance_kilometres > 0
-      ORDER BY start_date DESC, id ASC LIMIT 20`.pipe(
-          Effect.flatMap(decodeRows),
-        );
+      AND ${after ? sql`start_date >= ${after}::timestamptz` : sql`TRUE`}
+      ORDER BY start_date ASC, id ASC`.pipe(Effect.flatMap(decodeRows));
         return {
           completedCount: totals!.completedCount,
           distanceKilometres: totals!.distanceKilometres,
           currentPace: latest?.pace,
-          trends: [...recent].reverse(),
+          trends,
         };
       },
       Effect.mapError(databaseError("Could not load training overview")),

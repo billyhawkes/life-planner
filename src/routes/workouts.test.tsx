@@ -2,8 +2,27 @@ import { describe, expect, it } from "bun:test";
 import { readOptions } from "@/services/workouts/helpers";
 import { ScheduleDays } from "./components/schedule";
 import { renderDashboard } from "./workouts";
+import { TrainingChart } from "@/services/workouts/components/training-chart";
 
 describe("planner layout", () => {
+  it("defaults training history to all time and preserves the range in chart links", () => {
+    expect(readOptions({}).range).toBe("all");
+    expect(readOptions({ range: "invalid" }).range).toBe("all");
+    for (const range of ["30", "90", "365", "all"] as const) {
+      const options = readOptions({ view: "stats", range });
+      expect(options.range).toBe(range);
+      const chart = TrainingChart({ workouts: [], options }).value;
+      expect(chart).toContain('aria-label="Chart time range"');
+      expect(chart).toContain("30 days");
+      expect(chart).toContain("90 days");
+      expect(chart).toContain("1 year");
+      expect(chart).toContain("All time");
+      expect(chart).toContain(
+        `activity=cycling&amp;metric=pace&amp;range=${range}`,
+      );
+    }
+  });
+
   it("shows time stats and navigation for the selected week, not Stats", () => {
     const timeline = {
       labels: [

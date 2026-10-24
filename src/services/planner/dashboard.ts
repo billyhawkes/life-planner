@@ -49,6 +49,12 @@ export const loadDashboard = Effect.fn("Planner.loadDashboard")(function* (
       timeline,
       overview: yield* workouts.overview({
         activityType: options.activity === "cycling" ? "Cycling" : "Running",
+        after:
+          options.range === "all"
+            ? undefined
+            : new Date(
+                Date.now() - Number(options.range) * 86400000,
+              ).toISOString(),
       }),
     };
     return data;

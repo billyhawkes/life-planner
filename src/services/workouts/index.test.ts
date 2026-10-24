@@ -10,6 +10,41 @@ const TestLive = Workouts.baseLayer.pipe(Layer.provideMerge(DatabaseTest));
 describe.skipIf(!process.env.TEST_DATABASE_URL)(
   "workouts PostgreSQL integration",
   () => {
+    it("loads all training history and optionally filters by time", () =>
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const service = yield* Workouts;
+          const sql = yield* SqlClient.SqlClient;
+          const activityType = `trends-test-${crypto.randomUUID()}`;
+          yield* Effect.addFinalizer(() =>
+            sql`DELETE FROM workouts WHERE activity_type = ${activityType}`.pipe(
+              Effect.orDie,
+            ),
+          );
+          const now = Date.now();
+          for (let index = 0; index < 25; index++) {
+            yield* service.create({
+              activityType,
+              status: "completed",
+              startDate: new Date(now - index * 86400000).toISOString(),
+              durationMinutes: 30,
+              distanceKilometres: 5,
+            });
+          }
+          const all = (yield* service.overview({ activityType })).trends;
+          expect(all).toHaveLength(25);
+          expect(all.map((workout) => workout.startDate)).toEqual(
+            all.map((workout) => workout.startDate).sort(),
+          );
+          const filtered = (yield* service.overview({
+            activityType,
+            after: new Date(now - 7 * 86400000).toISOString(),
+          })).trends;
+          expect(filtered).toHaveLength(8);
+          expect(filtered).toEqual(all.slice(-8));
+        }).pipe(Effect.scoped, Effect.provide(TestLive)),
+      ));
+
     it(
       "adopts a legacy text-date table without deleting existing workouts",
       () =>

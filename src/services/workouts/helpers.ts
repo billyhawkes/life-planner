@@ -4,6 +4,7 @@ export type ViewOptions = {
   readonly view: "today" | "week" | "calendar" | "stats" | "menu";
   readonly activity: string;
   readonly metric: string;
+  readonly range: "all" | "30" | "90" | "365";
   readonly month: string;
   readonly week?: string;
   readonly search: string;
@@ -27,6 +28,10 @@ export const readOptions = (values: Record<string, string>): ViewOptions => ({
         : "today",
   activity: values.activity === "cycling" ? "cycling" : "running",
   metric: values.metric === "distance" ? "distance" : "pace",
+  range:
+    values.range === "30" || values.range === "90" || values.range === "365"
+      ? values.range
+      : "all",
   month: /^\d{4}-(0[1-9]|1[0-2])$/.test(values.month ?? "")
     ? values.month
     : dateKey(new Date()).slice(0, 7),
