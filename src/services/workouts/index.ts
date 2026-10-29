@@ -1,3 +1,4 @@
+import { SecureRandom } from "effect/crypto";
 import { Context, Effect, Layer, Option, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/sql";
 
@@ -58,6 +59,9 @@ const findMatchingPlan = (
 
 export class Workouts extends Context.Service<Workouts>()("Workouts", {
   make: Effect.gen(function* () {
+    const random = yield* SecureRandom.SecureRandom.pipe(
+      Effect.provide(SecureRandom.layerWebCrypto),
+    );
     const sql = yield* SqlClient.SqlClient;
     // JSON construction omits nullable optional fields and keeps the public schema unchanged.
     const columns = sql`jsonb_strip_nulls(jsonb_build_object(
@@ -297,7 +301,14 @@ export class Workouts extends Context.Service<Workouts>()("Workouts", {
       Request: WorkoutPayload,
       Result: workoutRow,
       execute: (payload) =>
-        sql`INSERT INTO workouts ${sql.insert({ id: crypto.randomUUID(), ...values(payload) })} RETURNING ${columns}`,
+        random
+          .uuidV7()
+          .pipe(
+            Effect.flatMap(
+              (id) =>
+                sql`INSERT INTO workouts ${sql.insert({ id, ...values(payload) })} RETURNING ${columns}`,
+            ),
+          ),
     });
     const create = Effect.fn("Workouts.create")((payload: WorkoutPayload) =>
       insert(payload).pipe(

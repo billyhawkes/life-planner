@@ -1,3 +1,4 @@
+import { SecureRandom } from "effect/crypto";
 import { Context, Effect, Layer, Option, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/sql";
 import { DatabaseLive, DatabaseTest } from "@/db";
@@ -16,16 +17,24 @@ const databaseError = (message: string) => (cause: unknown) =>
 
 export class Habits extends Context.Service<Habits>()("Habits", {
   make: Effect.gen(function* () {
+    const random = yield* SecureRandom.SecureRandom.pipe(
+      Effect.provide(SecureRandom.layerWebCrypto),
+    );
     const sql = yield* SqlClient.SqlClient;
     const createQuery = SqlSchema.findOne({
       Request: Schema.Struct({ payload: HabitPayload }).annotate({
         identifier: "CreateHabitRequest",
       }),
       Result: Habit,
-      execute: ({ payload }) => sql`
+      execute: ({ payload }) =>
+        random.uuidV7().pipe(
+          Effect.flatMap(
+            (id) => sql`
         INSERT INTO habits (id, name, icon, start_date, notes)
-        VALUES (${crypto.randomUUID()}, ${payload.name}, ${payload.icon}, ${payload.startDate}::date, ${payload.notes})
+        VALUES (${id}, ${payload.name}, ${payload.icon}, ${payload.startDate}::date, ${payload.notes})
         RETURNING id, name, icon, start_date::text AS "startDate", notes`,
+          ),
+        ),
     });
     const create = Effect.fn("Habits.create")(
       (input: { readonly payload: HabitPayload }) =>

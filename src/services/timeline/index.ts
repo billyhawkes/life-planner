@@ -1,3 +1,4 @@
+import { SecureRandom } from "effect/crypto";
 import { Context, Effect, Layer, Schema } from "effect";
 import { SqlClient } from "effect/sql";
 import { DatabaseLive, DatabaseTest } from "@/db";
@@ -12,6 +13,7 @@ import {
 
 export class Timeline extends Context.Service<Timeline>()("Timeline", {
   make: Effect.gen(function* () {
+    const random = yield* SecureRandom.SecureRandom.pipe(Effect.provide(SecureRandom.layerWebCrypto));
     const sql = yield* SqlClient.SqlClient;
     const fail = (message: string) => new TimelineError({ message });
     const protect = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
@@ -51,7 +53,7 @@ export class Timeline extends Context.Service<Timeline>()("Timeline", {
           yield* sql`UPDATE time_labels SET name = ${payload.name}, goal_type = ${payload.goalType ?? "minimum"}, goal_minutes = ${payload.goalMinutes}, weekly_goal_minutes = ${payload.weeklyGoalMinutes}, color = ${payload.color} WHERE id = ${input.id} RETURNING id`;
         if (!rows.length) return yield* fail("Label not found.");
       } else
-        yield* sql`INSERT INTO time_labels (id, name, goal_type, goal_minutes, weekly_goal_minutes, color) VALUES (${crypto.randomUUID()}, ${payload.name}, ${payload.goalType ?? "minimum"}, ${payload.goalMinutes}, ${payload.weeklyGoalMinutes}, ${payload.color})`;
+        yield* sql`INSERT INTO time_labels (id, name, goal_type, goal_minutes, weekly_goal_minutes, color) VALUES (${yield* random.uuidV7()}, ${payload.name}, ${payload.goalType ?? "minimum"}, ${payload.goalMinutes}, ${payload.weeklyGoalMinutes}, ${payload.color})`;
     }, protect);
     const lock = sql`SELECT pg_advisory_xact_lock(7319042)`;
     const saveBlock = Effect.fn("Timeline.saveBlock")(
@@ -88,7 +90,7 @@ export class Timeline extends Context.Service<Timeline>()("Timeline", {
                   yield* sql`UPDATE time_blocks SET label_id = ${payload.labelId}, start_time = ${payload.startTime}::timestamptz, end_time = ${payload.endTime}::timestamptz, notes = ${payload.notes} WHERE id = ${input.id} RETURNING id`;
                 if (!rows.length) return yield* fail("Time block not found.");
               } else
-                yield* sql`INSERT INTO time_blocks (id, label_id, start_time, end_time, notes) VALUES (${crypto.randomUUID()}, ${payload.labelId}, ${payload.startTime}::timestamptz, ${payload.endTime}::timestamptz, ${payload.notes})`;
+                yield* sql`INSERT INTO time_blocks (id, label_id, start_time, end_time, notes) VALUES (${yield* random.uuidV7()}, ${payload.labelId}, ${payload.startTime}::timestamptz, ${payload.endTime}::timestamptz, ${payload.notes})`;
             }),
           ),
         ),
@@ -121,7 +123,7 @@ export class Timeline extends Context.Service<Timeline>()("Timeline", {
                 ),
               ).toISOString();
               yield* sql`UPDATE time_blocks SET end_time = ${now}::timestamptz WHERE end_time IS NULL`;
-              yield* sql`INSERT INTO time_blocks (id, label_id, start_time) VALUES (${crypto.randomUUID()}, ${input.labelId}, ${now}::timestamptz)`;
+              yield* sql`INSERT INTO time_blocks (id, label_id, start_time) VALUES (${yield* random.uuidV7()}, ${input.labelId}, ${now}::timestamptz)`;
             }),
           ),
         ),

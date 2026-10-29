@@ -15,11 +15,11 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@effect/platform-bun": "4.0.0",
-    "@effect/sql-pg": "4.0.0",
-    "@krak-stack/registry": "0.1.55",
+    "@effect/platform-bun": "4.1.0",
+    "@effect/sql-pg": "4.1.0",
+    "@krak-stack/registry": "0.1.56",
     "@zip.js/zip.js": "2.8.34",
-    "effect": "4.0.0"
+    "effect": "4.1.0"
   },
   "devDependencies": {
     "@types/bun": "^1.4.2",
