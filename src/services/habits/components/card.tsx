@@ -7,10 +7,12 @@ export const HabitCard = ({
   occurrence,
   options,
   compact = false,
+  showCheckbox = false,
 }: {
   readonly occurrence: HabitOccurrence;
   readonly options: ViewOptions;
   readonly compact?: boolean;
+  readonly showCheckbox?: boolean;
 }) => {
   const { habit, date, completed } = occurrence;
   const action = `/habits/${encodeURIComponent(habit.id).replaceAll("'", "%27")}/completion`;
@@ -41,6 +43,11 @@ export const HabitCard = ({
           aria-pressed={String(completed)}
           title={`${habit.name} — ${completed ? "Mark incomplete" : "Complete"}. Right-click for habit actions.`}
         >
+          {showCheckbox ? (
+            <span class="task-checkbox" aria-hidden="true">
+              {completed ? <Icon name="check" /> : null}
+            </span>
+          ) : null}
           <span class="habit-symbol" aria-hidden="true">
             <Icon name={habit.icon} />
           </span>

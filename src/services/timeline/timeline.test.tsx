@@ -239,7 +239,7 @@ describe("timeline presentation and validation", () => {
     }).value;
     expect(grid).not.toContain('aria-label="Time tracker"');
   });
-  it("uses icon-only habits in the week while keeping names in Today", () => {
+  it("keeps habits compact in the week and groups them in a list in Today", () => {
     const day: PlannerDay = {
       tasks: [],
       date: new Date("2026-01-01T00:00:00"),
@@ -267,12 +267,31 @@ describe("timeline presentation and validation", () => {
       'aria-label="Complete: Guitar practice on 2026-01-01"',
     );
     expect(week).toContain('title="Guitar practice — Complete.');
+    expect(week).not.toContain("today-habit-list");
     const today = renderDashboard(
-      { view: "today", days: [day] },
+      {
+        view: "today",
+        days: [
+          {
+            ...day,
+            habits: day.habits.map((occurrence) => ({
+              ...occurrence,
+              completed: true,
+            })),
+          },
+        ],
+      },
       readOptions({ view: "today" }),
     ).value;
     expect(today).not.toContain('class="habit-control compact ');
+    expect(today).toContain('<h3 id="today-habits-title">Habits</h3>');
+    expect(today).toContain('<ul class="today-habit-list" role="list"><li>');
     expect(today).toContain('<span class="habit-name">Guitar practice</span>');
+    expect(today).toContain('action="/habits/guitar/completion"');
+    expect(today).toContain('aria-pressed="true"');
+    expect(today).toContain(
+      '<span class="task-checkbox" aria-hidden="true"><svg',
+    );
   });
   it("renders slim weekly progress totals without cards or daily goals", () => {
     const html = TrackingControls({

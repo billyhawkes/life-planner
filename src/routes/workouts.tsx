@@ -96,6 +96,14 @@ export const renderDashboard = (
               compact={compact || data.view === "week"}
             />
           ));
+          const habitRows = habits.map((occurrence) => (
+            <HabitCard
+              occurrence={occurrence}
+              options={options}
+              compact={data.view !== "today"}
+              showCheckbox={data.view === "today"}
+            />
+          ));
           const cards = (
             <div class="day-cards">
               {data.view === "today" && tasks.length > 0 ? (
@@ -109,17 +117,21 @@ export const renderDashboard = (
               ) : (
                 taskRows
               )}
-              {habits.length > 0 ? (
-                <div class="habit-controls">
-                  {habits.map((occurrence) => (
-                    <HabitCard
-                      occurrence={occurrence}
-                      options={options}
-                      compact={compact || data.view === "week"}
-                    />
-                  ))}
-                </div>
-              ) : null}
+              {habits.length === 0 ? null : data.view === "today" ? (
+                <section
+                  class="card today-habits"
+                  aria-labelledby="today-habits-title"
+                >
+                  <h3 id="today-habits-title">Habits</h3>
+                  <ul class="today-habit-list" role="list">
+                    {habitRows.map((row) => (
+                      <li>{row}</li>
+                    ))}
+                  </ul>
+                </section>
+              ) : (
+                <div class="habit-controls">{habitRows}</div>
+              )}
               {workouts.map((workout) => (
                 <WorkoutCard
                   workout={workout}
