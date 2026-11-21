@@ -2311,7 +2311,6 @@ html:has(dialog:modal) {
   margin: 0.25rem 0 0;
   color: var(--muted);
   font-size: var(--font-size-small);
-  white-space: pre-wrap;
 }
 
 .personal-goal-status {
@@ -2509,10 +2508,13 @@ button.task-delete:hover:not(:disabled) {
   font-size: var(--font-size-small);
   color: var(--muted);
   margin: 0.25rem 0 0;
+}
+
+.personal-goal-row p,
+.task-content p {
   overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .task-content .task-date {
