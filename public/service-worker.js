@@ -1,5 +1,5 @@
-const CACHE_NAME = "life-planner-v2";
-const OFFLINE_PAGE = "/workouts?view=today";
+const CACHE_NAME = "life-planner-v3";
+const OFFLINE_PAGE = "/";
 const APP_SHELL = [
   OFFLINE_PAGE,
   "/open-props-1.7.23.min.css",

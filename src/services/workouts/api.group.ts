@@ -113,8 +113,9 @@ export const WorkoutsApiGroup = HttpApiGroup.make("workouts")
     }).annotate(OpenApi.Exclude, true),
   )
   .add(
-    HttpApiEndpoint.get("home", "/", {
-      success: HttpApiSchema.Empty(303),
+    HttpApiEndpoint.get("new", "/workouts/new", {
+      query: WorkoutViewQuery,
+      success: BrowserResponse,
     }).annotate(OpenApi.Exclude, true),
   )
   .add(

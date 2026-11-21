@@ -12,6 +12,11 @@ import { Workouts } from "@/services/workouts";
 import { workoutsHandler } from "@/services/workouts/api.builder";
 import { Habits } from "@/services/habits";
 import { habitsHandler } from "@/services/habits/api.builder";
+import { Tasks } from "@/services/tasks";
+import { tasksHandler } from "@/services/tasks/api.builder";
+import { Goals } from "@/services/goals";
+import { goalsHandler } from "@/services/goals/api.builder";
+import { plannerHandler } from "@/services/planner/api.builder";
 import { Timeline } from "@/services/timeline";
 import { timelineHandler } from "@/services/timeline/api.builder";
 import datastar from "../public/datastar.js" with { type: "text" };
@@ -50,7 +55,14 @@ const ready = Effect.gen(function* () {
 export const applicationRoutes = Layer.mergeAll(
   HttpApiBuilder.layer(AppApi, { openapiPath: "/api/openapi.json" }).pipe(
     Layer.provide(
-      Layer.mergeAll(workoutsHandler, habitsHandler, timelineHandler),
+      Layer.mergeAll(
+        plannerHandler,
+        workoutsHandler,
+        habitsHandler,
+        timelineHandler,
+        tasksHandler,
+        goalsHandler,
+      ),
     ),
   ),
   HttpApiScalar.layer(AppApi, { path: "/api/docs" }),
@@ -168,6 +180,8 @@ export const AppLive = applicationRoutes.pipe(
     Layer.mergeAll(
       Workouts.baseLayer,
       Habits.baseLayer,
+      Tasks.baseLayer,
+      Goals.baseLayer,
       Timeline.baseLayer,
     ).pipe(Layer.provideMerge(DatabaseLive)),
   ),

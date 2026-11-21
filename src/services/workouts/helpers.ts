@@ -1,7 +1,7 @@
 import type { Workout } from "./schema";
 
 export type ViewOptions = {
-  readonly view: "today" | "week" | "calendar" | "stats" | "menu";
+  readonly view: "dashboard" | "today" | "week" | "calendar" | "stats" | "menu";
   readonly activity: string;
   readonly metric: string;
   readonly range: "all" | "30" | "90" | "365";
@@ -23,6 +23,7 @@ export const readOptions = (values: Record<string, string>): ViewOptions => ({
       ? "stats"
       : values.view === "week" ||
           values.view === "calendar" ||
+          values.view === "dashboard" ||
           values.view === "menu"
         ? values.view
         : "today",
@@ -73,5 +74,30 @@ export const formatDate = (value: string) =>
 export const viewUrl = (
   options: ViewOptions,
   changes: Partial<ViewOptions> = {},
+) => {
+  const { view, ...values } = { ...options, ...changes };
+  const query = new URLSearchParams();
+  if (view === "week" && values.week) query.set("week", values.week);
+  if (view === "calendar") query.set("month", values.month);
+  if (values.search) query.set("search", values.search);
+  if (values.sort !== "-startDate") query.set("sort", values.sort);
+  if (values.page !== 1) query.set("page", String(values.page));
+  if (view === "stats") {
+    query.set("activity", values.activity);
+    query.set("metric", values.metric);
+    query.set("range", values.range);
+  }
+  const path = view === "dashboard" ? "/" : `/${view}`;
+  return query.size ? `${path}?${query}` : path;
+};
+
+// Forms carry view context explicitly; page navigation encodes it in the path.
+export const formUrl = (
+  options: ViewOptions,
+  path: string,
+  values: Record<string, string> = {},
 ) =>
-  `/workouts?${new URLSearchParams(Object.entries({ ...options, ...changes }).map(([key, value]) => [key, String(value)]))}`;
+  `${path}?${new URLSearchParams([
+    ...Object.entries(options).map(([key, value]) => [key, String(value)]),
+    ...Object.entries(values),
+  ])}`;

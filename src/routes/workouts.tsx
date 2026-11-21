@@ -7,6 +7,8 @@ import { PlannerWeekNavigation } from "./components/week-navigation";
 import { PlannerFeedback } from "./components/feedback";
 import { Icon, type IconName } from "./components/icon";
 import { HabitCard } from "@/services/habits/components/card";
+import { TaskCard } from "@/services/tasks/components/card";
+import { PersonalGoals } from "@/services/goals/components/list";
 import { WorkoutCard } from "@/services/workouts/components/card";
 import { TrainingChart } from "@/services/workouts/components/training-chart";
 import {
@@ -19,10 +21,12 @@ import {
   formatPace,
   dateKey,
   viewUrl,
+  formUrl,
   type ViewOptions,
 } from "@/services/workouts/helpers";
 
 const plannerViews: ReadonlyArray<readonly [ViewOptions["view"], string]> = [
+  ["dashboard", "Dashboard"],
   ["today", "Today"],
   ["week", "Week"],
   ["calendar", "Calendar"],
@@ -31,6 +35,7 @@ const plannerViews: ReadonlyArray<readonly [ViewOptions["view"], string]> = [
 ];
 
 const viewIcons: Record<ViewOptions["view"], IconName> = {
+  dashboard: "dashboard",
   today: "sun",
   week: "week",
   calendar: "calendar",
@@ -47,9 +52,14 @@ export const renderDashboard = (
     readonly error?: string;
     readonly values?: Record<string, string>;
   },
+  taskForm: Html = <section id="task-form" />,
+  personalGoalForm: Html = <section id="personal-goal-form" />,
 ) => {
   const compact = data.view === "calendar";
   const hours = { startHour: 0, endHour: 24 };
+  const timeGoalUrl = formUrl(options, "/timeline/goals/new", {
+    planner: "true",
+  });
   const tracking = data.timeline ? (
     <TrackingControls
       labels={data.timeline.labels}
@@ -58,15 +68,33 @@ export const renderDashboard = (
       day={data.view === "week" ? options.week : undefined}
       error={trackingFeedback?.error}
       values={trackingFeedback?.values}
-      showGoals={data.view === "week"}
+      showGoals={data.view === "week" || data.view === "dashboard"}
     />
   ) : undefined;
   const days =
-    data.view === "stats" || data.view === "menu"
+    data.view === "stats" || data.view === "menu" || data.view === "dashboard"
       ? []
-      : data.days.map(({ date, workouts, habits }, index) => {
+      : data.days.map(({ date, workouts, habits, tasks }, index) => {
+          const taskRows = tasks.map((task) => (
+            <TaskCard
+              task={task}
+              options={options}
+              compact={compact || data.view === "week"}
+            />
+          ));
           const cards = (
             <div class="day-cards">
+              {data.view === "today" && tasks.length > 0 ? (
+                <section
+                  class="card task-list today-tasks"
+                  aria-labelledby="today-tasks-title"
+                >
+                  <h4 id="today-tasks-title">Tasks</h4>
+                  {taskRows}
+                </section>
+              ) : (
+                taskRows
+              )}
               {habits.length > 0 ? (
                 <div class="habit-controls">
                   {habits.map((occurrence) => (
@@ -88,10 +116,11 @@ export const renderDashboard = (
               {!compact &&
               data.view !== "week" &&
               workouts.length === 0 &&
+              tasks.length === 0 &&
               habits.length === 0 ? (
                 <p class="day-empty">
                   {options.search
-                    ? "No matching workouts or habits."
+                    ? "No matching tasks, workouts, or habits."
                     : "Nothing planned for this day."}
                 </p>
               ) : null}
@@ -163,13 +192,75 @@ export const renderDashboard = (
       <div class="planner-content">
         {form}
         {habitForm}
+        {taskForm}
+        {personalGoalForm}
         <PlannerFeedback />
         {data.view === "week" ? (
           <PlannerWeekNavigation options={options} totals={tracking} />
-        ) : (
+        ) : data.view === "dashboard" ? null : (
           tracking
         )}
-        {data.view === "menu" ? (
+        {data.view === "dashboard" ? (
+          <section class="task-dashboard" aria-labelledby="dashboard-title">
+            <header class="task-dashboard-heading">
+              <div>
+                <h1 id="dashboard-title">Dashboard</h1>
+                <p>
+                  Capture tasks in your inbox, then give them a date when you
+                  are ready.
+                </p>
+              </div>
+              <CreateMenu options={options} />
+            </header>
+            <PersonalGoals goals={data.goals} />
+            <section
+              class="card dashboard-card"
+              aria-labelledby="homepage-time-goals-title"
+            >
+              <header class="task-list-heading">
+                <h2 id="homepage-time-goals-title">Time goals</h2>
+                <a
+                  class="task-add"
+                  href={timeGoalUrl}
+                  data-on:click__prevent={`@get('${timeGoalUrl}')`}
+                >
+                  <Icon name="plus" /> Add time goal
+                </a>
+              </header>
+              {tracking}
+              {!data.timeline?.labels.length ? (
+                <p class="day-empty">No time goals yet.</p>
+              ) : null}
+            </section>
+            <section
+              class="card dashboard-card task-list"
+              aria-label="Inbox tasks"
+            >
+              <header class="task-list-heading">
+                <h2>
+                  Inbox{" "}
+                  <span class="task-count">
+                    {data.tasks.filter((task) => !task.completed).length}
+                  </span>
+                </h2>
+                <a
+                  class="task-add"
+                  href={formUrl(options, "/tasks/new")}
+                  data-on:click__prevent={`@get('${formUrl(options, "/tasks/new")}')`}
+                >
+                  <Icon name="plus" /> Add task
+                </a>
+              </header>
+              {data.tasks.length ? (
+                data.tasks.map((task) => (
+                  <TaskCard task={task} options={options} />
+                ))
+              ) : (
+                <p class="day-empty">Your inbox is clear.</p>
+              )}
+            </section>
+          </section>
+        ) : data.view === "menu" ? (
           <section class="menu-page" aria-labelledby="menu-title">
             <h1 id="menu-title">Menu</h1>
             <section class="card" aria-labelledby="menu-import-title">
@@ -181,8 +272,8 @@ export const renderDashboard = (
               <a
                 id="menu-import-trigger"
                 class="button"
-                href={`${viewUrl(options)}&import=true`}
-                data-on:click__prevent={`@get('${viewUrl(options)}&import=true')`}
+                href={formUrl(options, "/workouts/new", { import: "true" })}
+                data-on:click__prevent={`@get('${formUrl(options, "/workouts/new", { import: "true" })}')`}
               >
                 Import Apple Health
               </a>

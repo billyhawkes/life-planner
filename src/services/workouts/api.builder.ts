@@ -1,4 +1,4 @@
-import { Effect, Option, Schema } from "effect";
+import { Effect } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { HttpApiBuilder, HttpApiError } from "effect/http-api";
 
@@ -8,60 +8,15 @@ import { renderDashboard } from "@/routes/workouts";
 import { loadDashboard } from "@/services/planner/dashboard";
 import { isDatastar, sse } from "@/lib/browser";
 import { renderDocument } from "@/routes/document";
-import { renderLoadError } from "@/routes/error";
 import { PlannerFeedback } from "@/routes/components/feedback";
 import { Workouts } from "./index";
-import { decodeWorkoutForm, HealthImportStats } from "./schema";
+import { decodeWorkoutForm } from "./schema";
 import { WorkoutForm } from "./components/form";
 import { HealthImportForm } from "./components/import-form";
 import { readHealthArchive } from "./health-import";
 import type { HealthImportPayload } from "./schema";
 import { readOptions, viewUrl } from "./helpers";
-
-const page = (query: Record<string, string>) =>
-  Effect.gen(function* () {
-    const request = yield* HttpServerRequest.HttpServerRequest;
-    const options = readOptions(query);
-    const service = yield* Workouts;
-    const edit = query.edit;
-    const workout = edit ? yield* service.get({ id: edit }) : undefined;
-    if (edit && !workout)
-      return HttpServerResponse.text("Workout not found", { status: 404 });
-    const initialDate = query.new ?? "";
-    const stats = Option.getOrUndefined(
-      Schema.decodeUnknownOption(HealthImportStats)(query),
-    );
-    const form =
-      query.import === "true" || stats !== undefined
-        ? HealthImportForm({ options, stats })
-        : workout || initialDate
-          ? WorkoutForm({
-              options,
-              workout,
-              initialDate:
-                /^\d{4}-\d{2}-\d{2}$/.test(initialDate) &&
-                Number.isFinite(Date.parse(initialDate))
-                  ? initialDate
-                  : undefined,
-            })
-          : undefined;
-    if (isDatastar(request) && form) return sse([patchElements(form)]);
-    const data = yield* loadDashboard(options);
-    return HttpServerResponse.html(
-      renderDocument(renderDashboard(data, options, form)).value,
-    );
-  }).pipe(
-    Effect.catch((error) =>
-      Effect.logError(error).pipe(
-        Effect.as(
-          HttpServerResponse.text(renderLoadError().value, {
-            status: 500,
-            contentType: "text/html",
-          }),
-        ),
-      ),
-    ),
-  );
+import { plannerPage } from "@/services/planner/api.builder";
 
 const save = (values: Record<string, string>, id?: string) =>
   Effect.gen(function* () {
@@ -176,10 +131,15 @@ const importHealth = Effect.fn("Workouts.importHealth")(
     const resultQuery = new URLSearchParams(
       Object.entries(stats).map(([key, value]) => [key, String(value)]),
     );
-    if (!isDatastar(request))
-      return HttpServerResponse.redirect(`${viewUrl(options)}&${resultQuery}`, {
-        status: 303,
-      });
+    if (!isDatastar(request)) {
+      const destination = viewUrl(options);
+      return HttpServerResponse.redirect(
+        `${destination}${destination.includes("?") ? "&" : "?"}${resultQuery}`,
+        {
+          status: 303,
+        },
+      );
+    }
     return sse([
       patchElements(
         renderDashboard(
@@ -286,12 +246,16 @@ export const workoutsHandler = HttpApiBuilder.group(
             .pipe(Effect.mapError(internalServerError));
         }),
       )
-      .handle("home", () =>
-        Effect.succeed(
-          HttpServerResponse.redirect("/workouts", { status: 303 }),
-        ),
+      .handle("new", ({ query }) => plannerPage(query))
+      .handle("page", ({ query }) =>
+        query.new || query.edit || query.import || query.imported
+          ? plannerPage(query)
+          : Effect.succeed(
+              HttpServerResponse.redirect(viewUrl(readOptions(query)), {
+                status: 303,
+              }),
+            ),
       )
-      .handle("page", ({ query }) => page(query))
       .handle("import", ({ payload, query }) => importHealth(payload, query))
       .handle("create", ({ payload }) => save(payload))
       .handle("update", ({ params, payload }) => save(payload, params.id)),

@@ -241,6 +241,7 @@ describe("timeline presentation and validation", () => {
   });
   it("uses icon-only habits in the week while keeping names in Today", () => {
     const day: PlannerDay = {
+      tasks: [],
       date: new Date("2026-01-01T00:00:00"),
       workouts: [],
       habits: [
@@ -572,6 +573,7 @@ describe("timeline presentation and validation", () => {
       date: new Date(`${day}T00:00:00`),
       workouts: [],
       habits: [],
+      tasks: [],
     }));
     const html = renderDashboard(
       { view: "week", days, timeline: { labels, blocks } },

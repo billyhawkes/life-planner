@@ -1,4 +1,4 @@
-import { viewUrl, type ViewOptions } from "@/services/workouts/helpers";
+import { formUrl, type ViewOptions } from "@/services/workouts/helpers";
 import { Icon } from "./icon";
 
 export const CreateMenu = ({
@@ -10,10 +10,17 @@ export const CreateMenu = ({
 }) => {
   const suffix = date ? `-${date}` : "";
   const menuId = `create-menu-items${suffix}`;
-  const workoutUrl = `${viewUrl(options)}&new=${date ?? "true"}`;
-  const habitUrl = workoutUrl.replace("/workouts?", "/habits/new?");
-  const goalUrl = `${viewUrl(options).replace("/workouts?", "/timeline/goals/new?")}&planner=true&day=${date ?? ""}`;
-  const timeUrl = `${viewUrl(options).replace("/workouts?", "/timeline/blocks/new?")}&planner=true&day=${date ?? ""}`;
+  const workoutUrl = formUrl(options, "/workouts/new", { new: date ?? "true" });
+  const habitUrl = formUrl(options, "/habits/new", { new: date ?? "true" });
+  const taskUrl = formUrl(options, "/tasks/new", { new: date ?? "true" });
+  const goalUrl = formUrl(options, "/timeline/goals/new", {
+    planner: "true",
+    day: date ?? "",
+  });
+  const timeUrl = formUrl(options, "/timeline/blocks/new", {
+    planner: "true",
+    day: date ?? "",
+  });
   return (
     <div class="create-menu">
       <button
@@ -50,6 +57,13 @@ export const CreateMenu = ({
         class="create-menu-items"
       >
         <a
+          id={`add-task${suffix}`}
+          href={taskUrl}
+          data-on:click__prevent={`@get('${taskUrl}')`}
+        >
+          <Icon name="task" /> Task
+        </a>
+        <a
           id={`add-workout${suffix}`}
           href={workoutUrl}
           data-on:click__prevent={`@get('${workoutUrl}')`}
@@ -63,12 +77,21 @@ export const CreateMenu = ({
         >
           <Icon name="habit" /> Habit
         </a>
+        {options.view === "dashboard" ? (
+          <a
+            id="add-personal-goal"
+            href="/goals/new"
+            data-on:click__prevent="@get('/goals/new')"
+          >
+            <Icon name="target" /> Personal goal
+          </a>
+        ) : null}
         <a
           id={`add-goal${suffix}`}
           href={goalUrl}
           data-on:click__prevent={`@get('${goalUrl}')`}
         >
-          <Icon name="target" /> Goal
+          <Icon name="target" /> Time goal
         </a>
         <a
           id={`add-time${suffix}`}

@@ -1,6 +1,6 @@
 import type { HabitOccurrence } from "../schema";
 import type { ViewOptions } from "@/services/workouts/helpers";
-import { viewUrl } from "@/services/workouts/helpers";
+import { formUrl } from "@/services/workouts/helpers";
 import { Icon } from "@/routes/components/icon";
 
 export const HabitCard = ({
@@ -15,7 +15,9 @@ export const HabitCard = ({
   const { habit, date, completed } = occurrence;
   const action = `/habits/${encodeURIComponent(habit.id).replaceAll("'", "%27")}/completion`;
   const deleteAction = `/habits/${encodeURIComponent(habit.id).replaceAll("'", "%27")}/delete`;
-  const editUrl = `${viewUrl(options).replace("/workouts?", "/habits/new?")}&edit=${encodeURIComponent(habit.id).replaceAll("'", "%27")}`;
+  const editUrl = formUrl(options, "/habits/new", {
+    edit: habit.id,
+  }).replaceAll("'", "%27");
   const menuId = `habit-menu-${habit.id}-${date}`;
   return (
     <article

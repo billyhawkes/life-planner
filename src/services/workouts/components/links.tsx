@@ -1,5 +1,5 @@
 import type { Workout } from "../schema";
-import { formatDate, viewUrl, type ViewOptions } from "../helpers";
+import { formatDate, formUrl, type ViewOptions } from "../helpers";
 
 export const Link = ({
   label,
@@ -26,7 +26,9 @@ export const EditLink = ({
   readonly workout: Workout;
   readonly options: ViewOptions;
 }) => {
-  const url = `${viewUrl(options)}&edit=${encodeURIComponent(workout.id).replaceAll("'", "%27")}`;
+  const url = formUrl(options, "/workouts/new", {
+    edit: workout.id,
+  }).replaceAll("'", "%27");
   return (
     <a href={url} data-on:click__prevent={`@get('${url}')`}>
       Edit

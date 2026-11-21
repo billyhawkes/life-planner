@@ -109,6 +109,30 @@ const timeGoalTypes = Effect.gen(function* () {
   yield* sql`UPDATE time_labels SET goal_type = 'maximum' WHERE lower(trim(name)) = 'work'`;
 });
 
+const tasks = Effect.gen(function* () {
+  const sql = yield* SqlClient.SqlClient;
+  yield* sql`CREATE TABLE tasks (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL CHECK (length(trim(title)) BETWEEN 1 AND 200),
+    date DATE,
+    notes TEXT NOT NULL DEFAULT '' CHECK (length(notes) <= 2000),
+    completed BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`;
+  yield* sql`CREATE INDEX tasks_date ON tasks (date)`;
+});
+
+const goals = Effect.gen(function* () {
+  const sql = yield* SqlClient.SqlClient;
+  yield* sql`CREATE TABLE goals (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL CHECK (length(trim(title)) BETWEEN 1 AND 200),
+    notes TEXT NOT NULL DEFAULT '' CHECK (length(notes) <= 2000),
+    status TEXT NOT NULL DEFAULT 'planned' CHECK (status IN ('planned', 'active', 'achieved')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`;
+});
+
 export const migrate = Migrator.make({})({
   loader: Migrator.fromRecord({
     "001_workouts": initial,
@@ -119,5 +143,7 @@ export const migrate = Migrator.make({})({
     "006_timeline": timeline,
     "007_weekly_time_goals": weeklyTimeGoals,
     "008_time_goal_types": timeGoalTypes,
+    "009_tasks": tasks,
+    "010_goals": goals,
   }),
 });

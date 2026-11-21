@@ -1,4 +1,8 @@
-import { viewUrl, type ViewOptions } from "@/services/workouts/helpers";
+import {
+  formUrl,
+  viewUrl,
+  type ViewOptions,
+} from "@/services/workouts/helpers";
 import type { TimeLabel } from "../schema";
 import { TimeForm } from "./forms";
 
@@ -134,7 +138,11 @@ export const GoalForm = ({
           <section>
             <h3>Existing goals</h3>
             {labels.map((label) => {
-              const url = `${viewUrl(options).replace("/workouts?", "/timeline/goals/new?")}&planner=true&edit=${label.id}&day=${day}`;
+              const url = formUrl(options, "/timeline/goals/new", {
+                planner: "true",
+                edit: label.id,
+                day,
+              });
               return (
                 <p>
                   <a href={url} data-on:click__prevent={`@get('${url}')`}>

@@ -3,7 +3,7 @@
   "name": "Life Planner",
   "short_name": "Planner",
   "description": "Plan workouts, build habits, and keep your week on track.",
-  "start_url": "/workouts?view=today",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#f7f8fa",
@@ -33,17 +33,17 @@
     {
       "name": "Today",
       "short_name": "Today",
-      "url": "/workouts?view=today"
+      "url": "/today"
     },
     {
       "name": "This week",
       "short_name": "Week",
-      "url": "/workouts?view=week"
+      "url": "/week"
     },
     {
       "name": "Calendar",
       "short_name": "Calendar",
-      "url": "/workouts?view=calendar"
+      "url": "/calendar"
     }
   ]
 }

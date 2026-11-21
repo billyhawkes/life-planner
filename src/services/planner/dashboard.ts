@@ -1,6 +1,10 @@
 import { Effect } from "effect";
 import { Workouts } from "@/services/workouts";
 import { Habits } from "@/services/habits";
+import { Tasks } from "@/services/tasks";
+import { Goals } from "@/services/goals";
+import type { Goal } from "@/services/goals/schema";
+import type { Task } from "@/services/tasks/schema";
 import { dateKey, type ViewOptions } from "@/services/workouts/helpers";
 import type { HabitOccurrence } from "@/services/habits/schema";
 import type { WorkoutDay, WorkoutOverview } from "@/services/workouts/schema";
@@ -9,6 +13,7 @@ import type { TimeLabel, TimeBlock } from "@/services/timeline/schema";
 
 export type PlannerDay = WorkoutDay & {
   readonly habits: ReadonlyArray<HabitOccurrence>;
+  readonly tasks: ReadonlyArray<Task>;
 };
 type TimelineData = {
   readonly labels: readonly TimeLabel[];
@@ -16,6 +21,12 @@ type TimelineData = {
 };
 export type DashboardData =
   | { readonly view: "menu"; readonly timeline?: undefined }
+  | {
+      readonly view: "dashboard";
+      readonly tasks: ReadonlyArray<Task>;
+      readonly goals: ReadonlyArray<Goal>;
+      readonly timeline?: TimelineData;
+    }
   | {
       readonly view: "stats";
       readonly overview: WorkoutOverview;
@@ -32,6 +43,25 @@ export const loadDashboard = Effect.fn("Planner.loadDashboard")(function* (
 ) {
   if (options.view === "menu") {
     const data: DashboardData = { view: "menu" };
+    return data;
+  }
+  const tasks = yield* Tasks;
+  const allTasks = options.view === "stats" ? [] : yield* tasks.list({});
+  if (options.view === "dashboard") {
+    const tracker = yield* Timeline;
+    const goals = yield* Goals;
+    const search = options.search.trim().toLowerCase();
+    const data: DashboardData = {
+      view: "dashboard",
+      goals: yield* goals.list({}),
+      timeline: {
+        labels: yield* tracker.listLabels({}),
+        blocks: yield* tracker.listBlocks({}),
+      },
+      tasks: allTasks.filter((task) =>
+        `${task.title} ${task.notes}`.toLowerCase().includes(search),
+      ),
+    };
     return data;
   }
   const workouts = yield* Workouts;
@@ -89,6 +119,11 @@ export const loadDashboard = Effect.fn("Planner.loadDashboard")(function* (
     timeline,
     days: days.map((day) => ({
       ...day,
+      tasks: allTasks.filter(
+        (task) =>
+          task.date === dateKey(day.date) &&
+          `${task.title} ${task.notes}`.toLowerCase().includes(search),
+      ),
       habits: occurrences.filter(
         (occurrence) =>
           occurrence.date === dateKey(day.date) &&

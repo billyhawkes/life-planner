@@ -9,6 +9,8 @@ import { applicationRoutes } from "@/app";
 import { DatabaseTest } from "@/db";
 import { Workouts } from "@/services/workouts";
 import { Habits } from "@/services/habits";
+import { Tasks } from "@/services/tasks";
+import { Goals } from "@/services/goals";
 import { Timeline } from "@/services/timeline";
 import { TimeBlock, TimeLabel } from "@/services/timeline/schema";
 import { dayRange, weekDays } from "@/services/timeline/helpers";
@@ -26,6 +28,8 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
             const sql = yield* SqlClient.SqlClient;
             const workouts = yield* Workouts;
             const habits = yield* Habits;
+            const tasks = yield* Tasks;
+            const goals = yield* Goals;
             const timeline = yield* Timeline;
             const activityType = `http-test-${crypto.randomUUID()}`;
             yield* Effect.addFinalizer(() =>
@@ -45,6 +49,8 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
                   Layer.mergeAll(
                     Layer.succeed(Workouts, workouts),
                     Layer.succeed(Habits, habits),
+                    Layer.succeed(Tasks, tasks),
+                    Layer.succeed(Goals, goals),
                     Layer.succeed(Timeline, timeline),
                     Layer.succeed(SqlClient.SqlClient, sql),
                   ),
@@ -61,6 +67,159 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
               );
 
             const root = yield* request("/");
+            const goalTitle = `Get into hockey ${crypto.randomUUID()}`;
+            yield* Effect.addFinalizer(() =>
+              sql`DELETE FROM goals WHERE title = ${goalTitle}`.pipe(
+                Effect.orDie,
+              ),
+            );
+            const newGoal = yield* request("/goals/new", {
+              headers: { "Datastar-Request": "true" },
+            });
+            expect(newGoal.headers.get("content-type")).toContain(
+              "text/event-stream",
+            );
+            expect(yield* Effect.promise(() => newGoal.text())).toContain(
+              'id="personal-goal-form"',
+            );
+            const invalidGoal = yield* request("/goals", {
+              method: "POST",
+              body: new URLSearchParams({
+                title: goalTitle,
+                status: "invalid",
+              }),
+            });
+            expect(invalidGoal.status).toBe(400);
+            const createdGoal = yield* request("/goals", {
+              method: "POST",
+              body: new URLSearchParams({
+                title: goalTitle,
+                notes: "Find a local club",
+              }),
+            });
+            expect(createdGoal.status).toBe(303);
+            expect(createdGoal.headers.get("location")).toBe("/");
+            const savedGoal = (yield* goals.list({})).find(
+              (row) => row.title === goalTitle,
+            );
+            if (!savedGoal) return yield* Effect.die("Goal was not saved");
+            expect(savedGoal.status).toBe("planned");
+            const goalHome = yield* request("/");
+            const goalHomeHtml = yield* Effect.promise(() => goalHome.text());
+            expect(goalHomeHtml).toContain(goalTitle);
+            expect(goalHomeHtml).toContain(
+              'class="editable-row personal-goal-row"',
+            );
+            expect(goalHomeHtml).toContain("Find a local club");
+            expect(goalHomeHtml).toContain("Time goals");
+            const editedGoal = yield* request(`/goals/${savedGoal.id}`, {
+              method: "POST",
+              headers: { "Datastar-Request": "true" },
+              body: new URLSearchParams({
+                title: goalTitle,
+                status: "achieved",
+              }),
+            });
+            expect(editedGoal.headers.get("content-type")).toContain(
+              "text/event-stream",
+            );
+            expect(yield* Effect.promise(() => editedGoal.text())).toContain(
+              ">Achieved</span>",
+            );
+            expect((yield* goals.get({ id: savedGoal.id }))?.status).toBe(
+              "achieved",
+            );
+            const deletedGoal = yield* request(
+              `/goals/${savedGoal.id}/delete`,
+              {
+                method: "POST",
+                body: new URLSearchParams(),
+              },
+            );
+            expect(deletedGoal.status).toBe(303);
+            expect(yield* goals.get({ id: savedGoal.id })).toBeUndefined();
+            const taskTitle = `task-http-${crypto.randomUUID()}`;
+            yield* Effect.addFinalizer(() =>
+              sql`DELETE FROM tasks WHERE title = ${taskTitle}`.pipe(
+                Effect.orDie,
+              ),
+            );
+            const taskForm = yield* request("/tasks/new?view=dashboard");
+            expect(taskForm.status).toBe(200);
+            expect(yield* Effect.promise(() => taskForm.text())).toContain(
+              'id="task-dialog"',
+            );
+            const invalidTask = yield* request("/tasks", {
+              method: "POST",
+              body: new URLSearchParams({ title: " ", view: "dashboard" }),
+            });
+            expect(invalidTask.status).toBe(400);
+            const createdTask = yield* request("/tasks", {
+              method: "POST",
+              body: new URLSearchParams({
+                title: taskTitle,
+                view: "dashboard",
+              }),
+            });
+            expect(createdTask.status).toBe(303);
+            expect(createdTask.headers.get("location")).toContain("/");
+            const task = (yield* tasks.list({})).find(
+              (row) => row.title === taskTitle,
+            )!;
+            expect(task.date).toBeNull();
+            const taskDashboard = yield* request("/");
+            expect(yield* Effect.promise(() => taskDashboard.text())).toContain(
+              taskTitle,
+            );
+            const taskDate = dateKey(new Date());
+            const scheduledTask = yield* request(`/tasks/${task.id}`, {
+              method: "POST",
+              headers: { "Datastar-Request": "true" },
+              body: new URLSearchParams({
+                title: taskTitle,
+                date: taskDate,
+                view: "today",
+              }),
+            });
+            expect(scheduledTask.headers.get("content-type")).toContain(
+              "text/event-stream",
+            );
+            expect(yield* Effect.promise(() => scheduledTask.text())).toContain(
+              taskTitle,
+            );
+            for (const view of ["today", "week", "calendar"]) {
+              const taskPage = yield* request(`/${view}`);
+              expect(yield* Effect.promise(() => taskPage.text())).toContain(
+                taskTitle,
+              );
+            }
+            for (const completed of [true, false]) {
+              const completion = yield* request(
+                `/api/tasks/${task.id}/completion`,
+                {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ completed }),
+                },
+              );
+              expect(completion.status).toBe(200);
+              expect((yield* tasks.get({ id: task.id }))?.completed).toBe(
+                completed,
+              );
+            }
+            const taskDeleted = yield* request(`/tasks/${task.id}/delete`, {
+              method: "POST",
+              headers: { "Datastar-Request": "true" },
+              body: new URLSearchParams({ view: "dashboard" }),
+            });
+            expect(taskDeleted.headers.get("content-type")).toContain(
+              "text/event-stream",
+            );
+            expect(yield* tasks.get({ id: task.id })).toBeUndefined();
+            expect(
+              (yield* request(`/api/tasks/${task.id}`, { method: "DELETE" }))
+                .status,
+            ).toBe(404);
             const dragScript = yield* request("/timeline.js");
             expect(dragScript.status).toBe(200);
             expect(dragScript.headers.get("content-type")).toContain(
@@ -488,7 +647,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
             ).toHaveLength(7);
             expect(plannerLabelHtml).toContain('class="tracking-goal-list"');
             expect(plannerLabelHtml).not.toContain("What are you working on?");
-            expect(plannerLabelHtml).toContain("Goal</a>");
+            expect(plannerLabelHtml).toContain("Time goal</a>");
             const plannerRedirect = yield* request(
               `/timeline/labels/${timeLabel.id}`,
               {
@@ -507,9 +666,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
               },
             );
             expect(plannerRedirect.status).toBe(303);
-            expect(plannerRedirect.headers.get("location")).toContain(
-              "/workouts?view=week",
-            );
+            expect(plannerRedirect.headers.get("location")).toContain("/week");
             const invalidWeeklyGoal = yield* request(
               `/timeline/labels/${timeLabel.id}`,
               {
@@ -534,9 +691,18 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
             expect(invalidWeeklyHtml).toContain('id="dashboard"');
             expect(invalidWeeklyHtml).toContain('role="alert"');
             expect(invalidWeeklyHtml).toContain('value="10081"');
-            expect(root.status).toBe(303);
-            expect(root.headers.get("location")).toBe("/workouts");
-            const page = yield* request("/workouts?view=week");
+            expect(root.status).toBe(200);
+            expect(yield* Effect.promise(() => root.text())).toContain(
+              'id="dashboard-title"',
+            );
+            const legacy = yield* request(
+              "/workouts?view=week&week=2025-12-29",
+            );
+            expect(legacy.status).toBe(303);
+            expect(legacy.headers.get("location")).toBe(
+              "/week?week=2025-12-29",
+            );
+            const page = yield* request("/week");
             expect(page.status).toBe(200);
             const weekStatsHtml = yield* Effect.promise(() => page.text());
             expect(weekStatsHtml).toContain('id="dashboard"');
@@ -544,9 +710,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
             expect(weekStatsHtml).toContain("h/40</strong>");
             expect(weekStatsHtml).toContain("/timeline/goals/new?view=week");
             expect(weekStatsHtml).toContain("Previous week");
-            const pastWeek = yield* request(
-              "/workouts?view=week&week=2025-12-29",
-            );
+            const pastWeek = yield* request("/week?week=2025-12-29");
             const pastWeekHtml = yield* Effect.promise(() => pastWeek.text());
             expect(pastWeekHtml).toContain(
               'id="create-menu-trigger-2025-12-29"',
@@ -558,7 +722,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
               'id="create-menu-trigger-2026-01-05"',
             );
             expect(pastWeekHtml).toContain("week=2025-12-29");
-            const stats = yield* request("/workouts?view=stats");
+            const stats = yield* request("/stats");
             expect(stats.status).toBe(200);
             const statsHtml = yield* Effect.promise(() => stats.text());
             expect(statsHtml).toContain("Workout overview</h2>");
@@ -567,9 +731,12 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
             expect(statsHtml).toContain('class="stats-page"');
             expect(statsHtml).not.toContain('class="stats tracking-goal-list"');
             expect(statsHtml).not.toContain("All workouts");
-            const formPage = yield* request("/workouts?view=week&new=true", {
-              headers: { "Datastar-Request": "true" },
-            });
+            const formPage = yield* request(
+              "/workouts/new?view=week&new=true",
+              {
+                headers: { "Datastar-Request": "true" },
+              },
+            );
             expect(formPage.headers.get("content-type")).toContain(
               "text/event-stream",
             );
@@ -603,7 +770,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
             const serviceWorker = yield* request("/service-worker.js");
             expect(serviceWorker.headers.get("cache-control")).toBe("no-cache");
             expect(yield* Effect.promise(() => serviceWorker.text())).toContain(
-              'const CACHE_NAME = "life-planner-v2"',
+              'const CACHE_NAME = "life-planner-v3"',
             );
             const icon = yield* request("/icon-192.png");
             expect(icon.status).toBe(200);
@@ -762,9 +929,9 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
               }),
             });
             expect(undo.status).toBe(303);
-            expect(undo.headers.get("location")).toContain("view=today");
+            expect(undo.headers.get("location")).toBe("/today");
             const calendar = yield* request(
-              `/workouts?view=calendar&month=${habitForm.startDate.slice(0, 7)}`,
+              `/calendar?month=${habitForm.startDate.slice(0, 7)}`,
             );
             const calendarHtml = yield* Effect.promise(() => calendar.text());
             expect(calendarHtml).toContain(habitName);
@@ -788,15 +955,13 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
             expect(
               yield* Effect.promise(() => datedWorkoutDialog.text()),
             ).toContain('name="startDate" value="2026-10-04T09:00"');
-            const week = yield* request(
-              `/workouts?view=week&search=${habitName}`,
-            );
+            const week = yield* request(`/week?search=${habitName}`);
             const weekHtml = yield* Effect.promise(() => week.text());
             expect(weekHtml).toContain(habitName);
             expect(
               weekHtml.match(/class="day-create-button secondary"/g),
             ).toHaveLength(7);
-            const todayPage = yield* request("/workouts?view=today");
+            const todayPage = yield* request("/today");
             expect(
               (yield* Effect.promise(() => todayPage.text())).match(
                 /class="day-create-button secondary"/g,
@@ -823,7 +988,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
               body: new URLSearchParams(habitForm),
             });
             expect(nativeHabit.status).toBe(303);
-            expect(nativeHabit.headers.get("location")).toContain("view=today");
+            expect(nativeHabit.headers.get("location")).toBe("/today");
 
             const api = yield* request(
               `/api/workouts?limit=1&activityType=${activityType}`,
@@ -851,6 +1016,9 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
               "/api/habits",
               "/api/habits/{id}",
               "/api/habits/{id}/completion",
+              "/api/tasks",
+              "/api/tasks/{id}",
+              "/api/tasks/{id}/completion",
               "/api/timeline/blocks",
               "/api/timeline/blocks/{id}",
               "/api/timeline/blocks/{id}/stop",
@@ -911,9 +1079,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
               },
             );
             expect(nativeDeleted.status).toBe(303);
-            expect(nativeDeleted.headers.get("location")).toContain(
-              "view=today",
-            );
+            expect(nativeDeleted.headers.get("location")).toContain("/today");
 
             const importPage = yield* request("/workouts?import=true");
             expect(yield* Effect.promise(() => importPage.text())).toContain(
@@ -1001,6 +1167,8 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
               Layer.mergeAll(
                 Workouts.baseLayer,
                 Habits.baseLayer,
+                Tasks.baseLayer,
+                Goals.baseLayer,
                 Timeline.baseLayer,
               ).pipe(Layer.provideMerge(DatabaseTest)),
             ),

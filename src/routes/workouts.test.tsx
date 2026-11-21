@@ -93,7 +93,12 @@ describe("planner layout", () => {
         {
           view,
           days: [
-            { date: new Date("2026-02-01T12:00:00"), workouts: [], habits: [] },
+            {
+              date: new Date("2026-02-01T12:00:00"),
+              workouts: [],
+              habits: [],
+              tasks: [],
+            },
           ],
           timeline: { labels: [], blocks: [] },
         },

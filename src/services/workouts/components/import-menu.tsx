@@ -1,8 +1,8 @@
 import { Icon } from "@/routes/components/icon";
-import { viewUrl, type ViewOptions } from "../helpers";
+import { formUrl, type ViewOptions } from "../helpers";
 
 export const ImportMenu = ({ options }: { readonly options: ViewOptions }) => {
-  const url = `${viewUrl(options)}&import=true`;
+  const url = formUrl(options, "/workouts/new", { import: "true" });
   return (
     <div class="create-menu">
       <button

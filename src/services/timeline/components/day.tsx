@@ -8,7 +8,7 @@ import {
 import type { TimeBlock, TimeLabel } from "../schema";
 import {
   dateKey,
-  viewUrl,
+  formUrl,
   type ViewOptions,
 } from "@/services/workouts/helpers";
 import { TimerControls } from "./timer";
@@ -80,8 +80,7 @@ export const DayTimeline = ({
     });
   const url = (edit?: string, hour?: number) => {
     const base = options
-      ? viewUrl(options).replace("/workouts?", "/timeline/blocks/new?") +
-        "&planner=true"
+      ? formUrl(options, "/timeline/blocks/new") + "&planner=true"
       : "/timeline/blocks/new?";
     return `${base}&day=${day}${edit ? `&edit=${encodeURIComponent(edit)}` : ""}${hour !== undefined ? `&startTime=${day}T${String(hour).padStart(2, "0")}:00` : ""}`;
   };

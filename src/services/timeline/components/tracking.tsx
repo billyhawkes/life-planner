@@ -1,6 +1,7 @@
 import {
   dateKey,
   viewUrl,
+  formUrl,
   type ViewOptions,
 } from "@/services/workouts/helpers";
 import { blockMinutes, duration, weeklyMinutes } from "../helpers";
@@ -150,7 +151,9 @@ export const TrackingControls = ({
           class={
             options?.view === "week"
               ? "tracking-goal-list"
-              : "stats tracking-goal-list"
+              : options?.view === "dashboard"
+                ? "tracking-goal-list time-goal-rows"
+                : "card tracking-goal-list time-goal-rows"
           }
         >
           {labels.map((label) => {
@@ -158,7 +161,11 @@ export const TrackingControls = ({
               (block) => block.labelId === label.id,
             );
             const url = options
-              ? `${viewUrl(options).replace("/workouts?", "/timeline/goals/new?")}&planner=true&edit=${label.id}&day=${day}`
+              ? formUrl(options, "/timeline/goals/new", {
+                  planner: "true",
+                  edit: label.id,
+                  day,
+                })
               : `/timeline/goals/new?edit=${label.id}&day=${day}`;
             const dailyMinutes = matching.reduce(
               (sum, block) => sum + blockMinutes(block, day, now),
@@ -208,14 +215,19 @@ export const TrackingControls = ({
             }
             return (
               <article
-                class={`card timeline-goal${overMaximum ? " is-over-maximum" : ""}`}
+                class={`editable-row timeline-goal${overMaximum ? " is-over-maximum" : ""}`}
               >
-                <h3>
+                <h3 class="time-goal-name">
                   <a
+                    class="editable-row-link"
                     href={url}
                     data-on:click__prevent={`@get('${url}')`}
-                    style={`color:${label.color}`}
                   >
+                    <i
+                      class="time-goal-dot"
+                      style={`background:${label.color}`}
+                      aria-hidden="true"
+                    />
                     {label.name}
                   </a>
                 </h3>
@@ -230,7 +242,7 @@ export const TrackingControls = ({
                     </span>
                   ) : null}
                 </div>
-                <p>
+                <p class="time-goal-target">
                   {target
                     ? `of ${duration(target)} ${weekly ? "weekly" : "daily"} ${label.goalType}`
                     : `tracked ${weekly ? "this week" : "today"}`}

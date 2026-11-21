@@ -26,8 +26,8 @@ export const renderTimeline = ({
   >
     <header class="planner-topbar">
       <nav class="tabs" aria-label="Planner views">
-        <a href="/workouts?view=today">Today</a>
-        <a href="/workouts?view=week">This Week</a>
+        <a href="/today">Today</a>
+        <a href="/week">This Week</a>
       </nav>
     </header>
     <header class="timeline-heading">
