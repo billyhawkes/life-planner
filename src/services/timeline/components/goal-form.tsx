@@ -1,8 +1,4 @@
-import {
-  formUrl,
-  viewUrl,
-  type ViewOptions,
-} from "@/services/workouts/helpers";
+import { viewUrl, type ViewOptions } from "@/services/workouts/helpers";
 import type { TimeLabel } from "../schema";
 import { TimeForm } from "./forms";
 
@@ -134,25 +130,6 @@ export const GoalForm = ({
             {selected ? "Save goal" : "Create goal"}
           </button>
         </TimeForm>
-        {labels.length ? (
-          <section>
-            <h3>Existing goals</h3>
-            {labels.map((label) => {
-              const url = formUrl(options, "/timeline/goals/new", {
-                planner: "true",
-                edit: label.id,
-                day,
-              });
-              return (
-                <p>
-                  <a href={url} data-on:click__prevent={`@get('${url}')`}>
-                    {label.name} — Edit goal
-                  </a>
-                </p>
-              );
-            })}
-          </section>
-        ) : null}
       </dialog>
     </section>
   );

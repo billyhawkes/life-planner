@@ -382,43 +382,13 @@ header.week-toolbar {
 .weekly-time-total.is-over-maximum .weekly-time-progress::-moz-progress-bar {
   background: #b91c1c;
 }
-.timeline-goal-progress {
-  margin-top: 0.25rem;
-}
-.timeline-goal-metric,
-.timeline-goal-detail {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  font-variant-numeric: tabular-nums;
-}
-.timeline-goal .timeline-goal-percentage {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text);
-}
-.timeline-goal-metric .timeline-goal-percentage {
-  background: var(--canvas);
-  border-radius: var(--control-radius);
-  padding: 0.25rem 0.5rem;
-}
-.timeline-goal .timeline-goal-status {
-  margin-block: 0.5rem 0;
-  font-size: 0.8rem;
-}
-.timeline-goal.is-over-maximum .timeline-goal-percentage,
-.timeline-goal.is-over-maximum .timeline-goal-status {
-  color: var(--danger);
-}
-.timeline-goal.is-over-maximum progress {
+.timeline-goal-progress.is-over-maximum progress {
   accent-color: var(--danger);
 }
-.timeline-goal.is-over-maximum progress::-webkit-progress-value {
+.timeline-goal-progress.is-over-maximum progress::-webkit-progress-value {
   background: var(--danger);
 }
-.timeline-goal.is-over-maximum progress::-moz-progress-bar {
+.timeline-goal-progress.is-over-maximum progress::-moz-progress-bar {
   background: var(--danger);
 }
 .week-timelines {
@@ -2365,10 +2335,8 @@ html:has(dialog:modal) {
 
 .time-goal-rows .timeline-goal {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: baseline;
-  gap: 0.25rem 0.5rem;
-  padding-block: 0.5rem;
+  gap: 0.5rem;
+  padding-block: 0.625rem;
 }
 
 .time-goal-rows .timeline-goal + .timeline-goal {
@@ -2387,6 +2355,13 @@ html:has(dialog:modal) {
   gap: 0.5rem;
 }
 
+.time-goal-name .icon {
+  width: 1rem;
+  height: 1rem;
+  margin-inline-start: auto;
+  color: var(--muted);
+}
+
 .time-goal-rows .time-goal-name a:hover {
   text-decoration: none;
 }
@@ -2398,12 +2373,37 @@ html:has(dialog:modal) {
   border-radius: 50%;
 }
 
-.time-goal-rows .timeline-goal > :is(p, progress, .timeline-goal-progress) {
-  grid-column: 1 / -1;
-  margin: 0;
+.timeline-goal-periods {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  gap: 0.5rem 1rem;
+}
+
+.timeline-goal-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.timeline-goal .timeline-goal-badge {
+  flex: none;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.timeline-goal-progress.is-over-maximum .timeline-goal-badge {
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 .time-goal-rows .time-goal-target {
+  margin: 0;
   color: var(--muted);
   font-size: var(--font-size-small);
 }
@@ -2411,6 +2411,9 @@ html:has(dialog:modal) {
 .time-goal-rows .timeline-goal progress {
   height: 6px;
   background: var(--border);
+  flex: 1;
+  min-width: 0;
+  margin: 0;
 }
 
 .time-goal-rows .timeline-goal progress::-webkit-progress-bar {

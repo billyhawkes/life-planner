@@ -334,7 +334,7 @@ describe("timeline presentation and validation", () => {
       endHour: 22,
     });
   });
-  it("shows uncapped percentages and only marks maximums red when exceeded", () => {
+  it("shows actual time in a compact badge and only marks maximums red when exceeded", () => {
     for (const goalType of ["minimum", "maximum"] as const) {
       for (const minutes of [30, 60, 90]) {
         const html = TrackingControls({
@@ -361,7 +361,12 @@ describe("timeline presentation and validation", () => {
           ],
           day: "2026-01-01",
         }).value;
-        expect(html).toContain(`${(minutes / 60) * 100}%</span>`);
+        const tracked =
+          minutes === 30 ? "30m" : minutes === 60 ? "1h" : "1h 30m";
+        expect(html).toContain(
+          `class="timeline-goal-badge">${tracked} / 1h</span>`,
+        );
+        expect(html).not.toContain('class="timeline-goal-period"');
         expect(html.includes("is-over-maximum")).toBe(
           goalType === "maximum" && minutes > 60,
         );
@@ -387,9 +392,43 @@ describe("timeline presentation and validation", () => {
       blocks: [],
       day: "2026-01-01",
     }).value;
-    expect(noTarget).not.toContain("timeline-goal-percentage");
+    expect(noTarget).not.toContain("timeline-goal-badge");
     expect(noTarget).not.toContain("is-over-maximum");
     expect(noTarget).toContain("tracked today");
+  });
+  it("shows daily and weekly limits separately and flags only the exceeded period", () => {
+    const html = TrackingControls({
+      labels: [
+        {
+          id: "work",
+          name: "Work",
+          goalType: "maximum",
+          goalMinutes: 60,
+          weeklyGoalMinutes: 300,
+          color: "#15803d",
+        },
+      ],
+      blocks: [
+        {
+          id: "session",
+          labelId: "work",
+          startTime: new Date("2026-01-01T09:00").toISOString(),
+          endTime: new Date("2026-01-01T10:30").toISOString(),
+          notes: "",
+        },
+      ],
+      day: "2026-01-01",
+    }).value;
+    expect(html).toContain(
+      'class="timeline-goal-progress is-over-maximum"><span class="timeline-goal-period">Daily</span>',
+    );
+    expect(html).toContain(
+      'class="timeline-goal-progress"><span class="timeline-goal-period">Weekly</span>',
+    );
+    expect(html).toContain('max="60" value="60" aria-label="Work daily goal"');
+    expect(html).toContain(
+      'max="300" value="90" aria-label="Work weekly goal"',
+    );
   });
   it("opens editors from blocks and empty slots rather than duplicating entry lists", () => {
     const labels = [
