@@ -5,9 +5,9 @@ import { stylesUrl, timelineUrl } from "@/lib/static-assets";
 import { renderDocument } from "./document";
 
 describe("renderDocument", () => {
-  it("preloads the self-hosted Open Sans font", () => {
+  it("preloads the self-hosted Poppins font", () => {
     expect(renderDocument(html`<main>Planner</main>`).value).toContain(
-      'rel="preload" href="/open-sans-latin.woff2" as="font" type="font/woff2" crossorigin="anonymous"',
+      'rel="preload" href="/poppins-latin-400-5.3.0.woff2" as="font" type="font/woff2" crossorigin="anonymous"',
     );
   });
   it("loads fingerprinted calendar drag interactions", () => {
@@ -28,7 +28,7 @@ describe("renderDocument", () => {
 
     expect(document).toContain('rel="manifest" href="/manifest.webmanifest"');
     expect(document).toContain('rel="apple-touch-icon" href="/icon-180.png"');
-    expect(document).toContain('name="theme-color" content="#15803d"');
+    expect(document).toContain('name="theme-color" content="#f8faf9"');
     expect(document).toContain(
       'content="width=device-width, initial-scale=1, viewport-fit=cover"',
     );

@@ -10,7 +10,7 @@ export const renderDocument = (body: Html) =>
             name="viewport"
             content="width=device-width, initial-scale=1, viewport-fit=cover"
           />
-          <meta name="theme-color" content="#15803d" />
+          <meta name="theme-color" content="#f8faf9" />
           <meta name="mobile-web-app-capable" content="yes" />
           <meta name="apple-mobile-web-app-capable" content="yes" />
           <meta name="apple-mobile-web-app-title" content="Life Planner" />
@@ -26,7 +26,7 @@ export const renderDocument = (body: Html) =>
           <link rel="apple-touch-icon" href="/icon-180.png" />
           <link
             rel="preload"
-            href="/open-sans-latin.woff2"
+            href="/poppins-latin-400-5.3.0.woff2"
             as="font"
             type="font/woff2"
             crossorigin="anonymous"

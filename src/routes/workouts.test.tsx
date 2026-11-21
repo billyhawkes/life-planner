@@ -130,9 +130,10 @@ describe("planner layout", () => {
       ).value;
 
       expect(page).toContain(`class="planner-page planner-view-${view}"`);
-      expect(page).toContain('</footer><div class="planner-content">');
-      expect(page).toContain('aria-label="Planner navigation"');
-      expect(page).not.toContain('class="planner-brand"');
+      expect(page).toContain('</nav></div><div class="planner-content">');
+      expect(page).toContain('class="planner-sidebar"');
+      expect(page).toContain('class="planner-brand"');
+      expect(page.match(/aria-current="page"/g)).toHaveLength(1);
       expect(page).not.toContain('id="import-menu-trigger"');
       expect(page).toContain("<span>Menu</span>");
       expect(page).not.toContain('role="search"');
@@ -154,8 +155,44 @@ describe("planner layout", () => {
     expect(page).not.toContain('class="mobile-search"');
     expect(page).not.toContain('class="daily-plans');
     expect(page.indexOf('id="menu-import-trigger"')).toBeGreaterThan(
-      page.indexOf("</footer>"),
+      page.indexOf("</nav>"),
     );
+  });
+
+  it("places the inbox beside the goal panels on the dashboard", () => {
+    const page = renderDashboard(
+      { view: "dashboard", goals: [], tasks: [] },
+      readOptions({ view: "dashboard" }),
+    ).value;
+    expect(page).toContain('<h1 id="dashboard-title">Dashboard</h1>');
+    expect(page).toContain('aria-label="Inbox tasks"');
+    expect(page).toContain('class="dashboard-goals"');
+    expect(page).toContain('id="homepage-goals-title"');
+    expect(page).toContain('id="homepage-time-goals-title"');
+  });
+
+  it("keeps Today’s primary create menu scoped to the displayed date", () => {
+    const page = renderDashboard(
+      {
+        view: "today",
+        days: [
+          {
+            date: new Date("2026-02-01T12:00:00"),
+            workouts: [],
+            habits: [],
+            tasks: [],
+          },
+        ],
+      },
+      readOptions({ view: "today" }),
+    ).value;
+    expect(page.match(/popovertarget="create-menu-items[^"]*"/g)).toHaveLength(
+      1,
+    );
+    expect(page).toContain(
+      'id="create-menu-trigger-2026-02-01" class="button"',
+    );
+    expect(page).toContain("new=2026-02-01");
   });
 
   it("does not render search controls, even for bookmarked search URLs", () => {

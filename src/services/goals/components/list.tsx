@@ -7,7 +7,9 @@ export const PersonalGoals = ({ goals }: { goals: readonly Goal[] }) => (
     aria-labelledby="homepage-goals-title"
   >
     <header class="task-list-heading">
-      <h2 id="homepage-goals-title">Personal goals</h2>
+      <h2 id="homepage-goals-title">
+        <Icon name="target" /> Personal goals
+      </h2>
       <a
         class="task-add"
         href="/goals/new"

@@ -769,9 +769,19 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
             );
             const serviceWorker = yield* request("/service-worker.js");
             expect(serviceWorker.headers.get("cache-control")).toBe("no-cache");
-            expect(yield* Effect.promise(() => serviceWorker.text())).toContain(
-              'const CACHE_NAME = "life-planner-v3"',
+            const workerScript = yield* Effect.promise(() =>
+              serviceWorker.text(),
             );
+            expect(workerScript).toContain(
+              'const CACHE_NAME = "life-planner-v6"',
+            );
+            for (const weight of [400, 500, 600, 700]) {
+              const path = `/poppins-latin-${weight}-5.3.0.woff2`;
+              expect(workerScript).toContain(path);
+              const font = yield* request(path);
+              expect(font.status).toBe(200);
+              expect(font.headers.get("content-type")).toBe("font/woff2");
+            }
             const icon = yield* request("/icon-192.png");
             expect(icon.status).toBe(200);
             expect(icon.headers.get("content-type")).toBe("image/png");
@@ -964,7 +974,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
             const todayPage = yield* request("/today");
             expect(
               (yield* Effect.promise(() => todayPage.text())).match(
-                /class="day-create-button secondary"/g,
+                /id="create-menu-trigger-[^"]+" class="button"/g,
               ),
             ).toHaveLength(1);
             const missingHabit = yield* request(

@@ -1,10 +1,13 @@
-const CACHE_NAME = "life-planner-v3";
+const CACHE_NAME = "life-planner-v6";
 const OFFLINE_PAGE = "/";
 const APP_SHELL = [
   OFFLINE_PAGE,
   "/open-props-1.7.23.min.css",
   "/styles.css",
-  "/open-sans-latin.woff2",
+  "/poppins-latin-400-5.3.0.woff2",
+  "/poppins-latin-500-5.3.0.woff2",
+  "/poppins-latin-600-5.3.0.woff2",
+  "/poppins-latin-700-5.3.0.woff2",
   "/dialogs.js",
   "/charts.js",
   "/datastar.js",

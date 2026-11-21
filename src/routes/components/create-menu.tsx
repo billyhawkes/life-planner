@@ -4,9 +4,11 @@ import { Icon } from "./icon";
 export const CreateMenu = ({
   options,
   date,
+  primary = !date,
 }: {
   readonly options: ViewOptions;
   readonly date?: string;
+  readonly primary?: boolean;
 }) => {
   const suffix = date ? `-${date}` : "";
   const menuId = `create-menu-items${suffix}`;
@@ -26,11 +28,11 @@ export const CreateMenu = ({
       <button
         type="button"
         id={`create-menu-trigger${suffix}`}
-        class={date ? "day-create-button secondary" : "button"}
+        class={primary ? "button" : "day-create-button secondary"}
         popovertarget={menuId}
         aria-label={date ? `Create an item on ${date}` : "Create an item"}
       >
-        {date ? (
+        {!primary ? (
           <svg
             width="16"
             height="16"

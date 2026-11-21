@@ -141,7 +141,7 @@ describe("tasks", () => {
       expect(page).not.toContain("Nothing planned");
       if (view === "today") {
         expect(page).toMatch(
-          /class="card task-list today-tasks"[^>]*><h4 id="today-tasks-title">Tasks<\/h4>.*\/tasks\/scheduled\/completion/,
+          /class="card task-list today-tasks"[^>]*><h3 id="today-tasks-title">Tasks<\/h3>.*\/tasks\/scheduled\/completion/,
         );
         expect(page).toMatch(
           /class="task-edit editable-row-link"[^>]+><span class="task-title">&lt;Do something&gt;<\/span><time class="task-date" datetime="2026-11-21">.*?<\/time><\/a>/,
