@@ -360,13 +360,14 @@ header.week-toolbar {
   justify-content: flex-end;
   gap: 0.25rem;
 }
-.week-navigation-row a {
-  white-space: nowrap;
-  color: var(--muted);
-}
 .week-toolbar a.weekly-time-total {
   padding: 0.15rem 0.5rem;
   font-size: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--control-radius);
+}
+.week-toolbar a.weekly-time-total:hover {
+  background: var(--accent-soft);
 }
 .weekly-time-total.is-over-maximum > :is(span, strong) {
   color: #fff;
@@ -1477,18 +1478,6 @@ tbody tr:hover {
   color: var(--on-accent);
   border-radius: 50%;
 }
-.calendar-toolbar a {
-  font-size: var(--font-size-small);
-  text-decoration: none;
-  padding: 7px 10px;
-  border-radius: var(--control-radius);
-  border: 1px solid var(--border);
-  color: var(--text);
-  background: var(--surface);
-}
-.calendar-toolbar a:hover {
-  background: var(--accent-soft);
-}
 .calendar-day-heading {
   display: flex;
   justify-content: space-between;
@@ -2107,6 +2096,19 @@ html:has(dialog:modal) {
   }
 }
 @media (max-width: 480px) {
+  .calendar-panel > .calendar-toolbar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .calendar-panel > .calendar-toolbar h2 {
+    grid-area: 1 / 1 / 2 / -1;
+  }
+  .calendar-panel > .calendar-toolbar a:first-child {
+    justify-self: start;
+  }
+  .calendar-panel > .calendar-toolbar a:last-child {
+    justify-self: end;
+  }
   .form-dialog {
     width: calc(100% - var(--size-3));
     max-height: calc(100dvh - var(--size-3));
@@ -2290,9 +2292,6 @@ html:has(dialog:modal) {
     flex-wrap: wrap;
     gap: 0.125rem;
   }
-  .calendar-toolbar a {
-    padding-inline: 6px;
-  }
   .calendar-scroll {
     overflow: visible;
   }
@@ -2442,7 +2441,7 @@ html:has(dialog:modal) {
 }
 
 .task-list-heading,
-.task-add {
+.outline-action {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -2514,7 +2513,7 @@ html:has(dialog:modal) {
   overflow-wrap: anywhere;
 }
 
-.task-add {
+.outline-action {
   text-decoration: none;
   font-size: 0.8125rem;
   font-weight: 500;
@@ -2524,7 +2523,7 @@ html:has(dialog:modal) {
   border-radius: var(--control-radius);
   white-space: nowrap;
 }
-.task-add:hover {
+.outline-action:hover {
   background: var(--accent-soft);
 }
 

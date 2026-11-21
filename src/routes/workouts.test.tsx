@@ -59,6 +59,7 @@ describe("planner layout", () => {
     expect(page).toContain("Week navigation");
     expect(page).toContain("Previous week");
     expect(page).toContain("Next week");
+    expect(page.match(/class="outline-action"/g)).toHaveLength(3);
     expect(page).toContain("week=2025-12-22");
     expect(page).toContain("week=2026-01-05");
     expect(page).toContain("Dec 29, 2025 – Jan 4, 2026");
@@ -203,6 +204,19 @@ describe("planner layout", () => {
     expect(page).not.toContain('class="mobile-search"');
     expect(page).not.toContain('role="search"');
     expect(page).toContain('aria-current="page"');
+  });
+
+  it("uses shared outline actions for calendar month navigation", () => {
+    const page = renderDashboard(
+      { view: "calendar", days: [] },
+      readOptions({ view: "calendar", month: "2026-01" }),
+    ).value;
+    expect(page).toMatch(
+      /class="outline-action" href="[^"]*month=2025-12[^"]*" aria-label="Previous month"/,
+    );
+    expect(page).toMatch(
+      /class="outline-action" href="[^"]*month=2026-02[^"]*" aria-label="Next month"/,
+    );
   });
 
   it.each([28, 35, 42])(

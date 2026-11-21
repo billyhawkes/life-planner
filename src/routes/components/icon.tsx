@@ -53,6 +53,8 @@ const icons = {
     </>
   ),
   chevron: <path d="m8 10 4 4 4-4" />,
+  "arrow-left": <path d="M19 12H5m7-7-7 7 7 7" />,
+  "arrow-right": <path d="M5 12h14m-7-7 7 7-7 7" />,
   "circle-check": (
     <>
       <circle cx="12" cy="12" r="10" />

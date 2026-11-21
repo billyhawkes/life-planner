@@ -5,8 +5,8 @@ import {
   weekStart,
   type ViewOptions,
 } from "@/services/workouts/helpers";
-import { Link } from "@/services/workouts/components/links";
 import type { Html } from "@/lib/datastar";
+import { Icon } from "./icon";
 
 export const PlannerWeekNavigation = ({
   options,
@@ -26,22 +26,28 @@ export const PlannerWeekNavigation = ({
   return (
     <header class="calendar-toolbar week-toolbar" aria-label="Week navigation">
       <div class="week-navigation-row">
-        <Link
-          label="← Previous week"
-          url={viewUrl(options, { week: adjacentDay(start, -7) })}
-        />
+        <a
+          class="outline-action"
+          href={viewUrl(options, { week: adjacentDay(start, -7) })}
+        >
+          <Icon name="arrow-left" /> Previous week
+        </a>
         <h2>
           {format(start)} – {format(end)}
         </h2>
         <div class="week-navigation-actions">
-          <Link
-            label="This week"
-            url={viewUrl(options, { week: weekStart(dateKey(new Date())) })}
-          />
-          <Link
-            label="Next week →"
-            url={viewUrl(options, { week: adjacentDay(start, 7) })}
-          />
+          <a
+            class="outline-action"
+            href={viewUrl(options, { week: weekStart(dateKey(new Date())) })}
+          >
+            This week
+          </a>
+          <a
+            class="outline-action"
+            href={viewUrl(options, { week: adjacentDay(start, 7) })}
+          >
+            Next week <Icon name="arrow-right" />
+          </a>
         </div>
       </div>
       {totals}

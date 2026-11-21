@@ -272,7 +272,7 @@ export const renderDashboard = (
                   </span>
                 </h2>
                 <a
-                  class="task-add"
+                  class="outline-action"
                   href={formUrl(options, "/tasks/new")}
                   data-on:click__prevent={`@get('${formUrl(options, "/tasks/new")}')`}
                 >
@@ -301,7 +301,7 @@ export const renderDashboard = (
                     <Icon name="clock" /> Time goals
                   </h2>
                   <a
-                    class="task-add"
+                    class="outline-action"
                     href={timeGoalUrl}
                     data-on:click__prevent={`@get('${timeGoalUrl}')`}
                   >

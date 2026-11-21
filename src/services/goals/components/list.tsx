@@ -11,7 +11,7 @@ export const PersonalGoals = ({ goals }: { goals: readonly Goal[] }) => (
         <Icon name="target" /> Personal goals
       </h2>
       <a
-        class="task-add"
+        class="outline-action"
         href="/goals/new"
         data-on:click__prevent="@get('/goals/new')"
       >

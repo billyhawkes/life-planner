@@ -3,7 +3,7 @@ import {
   viewUrl,
   type ViewOptions,
 } from "@/services/workouts/helpers";
-import { Link } from "@/services/workouts/components/links";
+import { Icon } from "./icon";
 import { ScheduleDays, type ScheduleDay } from "./schedule";
 
 export const PlannerCalendar = ({
@@ -21,17 +21,23 @@ export const PlannerCalendar = ({
   return (
     <section class="calendar-panel">
       <header class="calendar-toolbar">
-        <Link
-          label="← Previous"
-          url={viewUrl(options, { month: dateKey(previous).slice(0, 7) })}
-        />
+        <a
+          class="outline-action"
+          href={viewUrl(options, { month: dateKey(previous).slice(0, 7) })}
+          aria-label="Previous month"
+        >
+          <Icon name="arrow-left" /> Previous
+        </a>
         <h2>
           {month.toLocaleDateString("en", { month: "long", year: "numeric" })}
         </h2>
-        <Link
-          label="Next →"
-          url={viewUrl(options, { month: dateKey(next).slice(0, 7) })}
-        />
+        <a
+          class="outline-action"
+          href={viewUrl(options, { month: dateKey(next).slice(0, 7) })}
+          aria-label="Next month"
+        >
+          Next <Icon name="arrow-right" />
+        </a>
       </header>
       <ScheduleDays month={month} days={days} />
     </section>
