@@ -70,6 +70,10 @@ export const renderDashboard = (
   const [title, description] = viewCopy[data.view];
   const titleId = `${data.view}-title`;
   const compact = data.view === "calendar";
+  const inboxTasks =
+    data.view === "dashboard"
+      ? data.tasks.filter((task) => task.date === null && !task.completed)
+      : [];
   const hours = { startHour: 0, endHour: 24 };
   const timeGoalUrl = formUrl(options, "/timeline/goals/new", {
     planner: "true",
@@ -267,9 +271,7 @@ export const renderDashboard = (
               <header class="task-list-heading">
                 <h2>
                   <Icon name="task" /> Inbox{" "}
-                  <span class="task-count">
-                    {data.tasks.filter((task) => !task.completed).length}
-                  </span>
+                  <span class="task-count">{inboxTasks.length}</span>
                 </h2>
                 <a
                   class="outline-action"
@@ -279,8 +281,8 @@ export const renderDashboard = (
                   <Icon name="plus" /> Add task
                 </a>
               </header>
-              {data.tasks.length ? (
-                data.tasks.map((task) => (
+              {inboxTasks.length ? (
+                inboxTasks.map((task) => (
                   <TaskCard task={task} options={options} />
                 ))
               ) : (

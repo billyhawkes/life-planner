@@ -16,9 +16,10 @@ export const TaskCard = ({
     "'",
     "%27",
   );
+  const notes = compact ? "" : task.notes;
   return (
     <article
-      class={`editable-row task-card ${compact ? "compact" : ""} ${task.completed ? "is-complete" : ""}`}
+      class={`editable-row task-card${compact ? " compact" : ""}${task.completed ? " is-complete" : ""}${notes ? " has-notes" : ""}`}
     >
       <form
         method="post"
@@ -46,7 +47,10 @@ export const TaskCard = ({
           href={editUrl}
           data-on:click__prevent={`@get('${editUrl}')`}
         >
-          <span class="task-title">{task.title}</span>
+          <span class="task-text">
+            <span class="task-title">{task.title}</span>
+            {notes ? <span class="task-notes">{notes}</span> : null}
+          </span>
           {!compact && task.date ? (
             <time class="task-date" datetime={task.date}>
               <Icon name="calendar" />
@@ -57,7 +61,6 @@ export const TaskCard = ({
             </time>
           ) : null}
         </a>
-        {!compact && task.notes ? <p>{task.notes}</p> : null}
       </div>
       <form
         class="task-actions"

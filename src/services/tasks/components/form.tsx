@@ -29,7 +29,9 @@ export const TaskForm = ({
           <div>
             <h2 id="task-form-title">{task ? "Edit task" : "Create task"}</h2>
             <p>
-              Choose a date, or leave it blank to keep this task in your inbox.
+              {task?.completed
+                ? "Choose a date, or leave it blank to keep the current date."
+                : "Choose a date, or leave it blank to keep this task in your inbox."}
             </p>
           </div>
           <a

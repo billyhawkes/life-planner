@@ -83,14 +83,16 @@ describe("tasks", () => {
     ).value;
     const start = page.indexOf('aria-label="Inbox tasks"');
     const end = page.indexOf("</section>", start);
+    const inbox = page.slice(start, end);
+    expect(inbox).toContain(">inbox-task</span>");
+    expect(inbox).toContain('<span class="task-count">1</span>');
     for (const title of [
-      "inbox-task",
       "overdue-task",
       "today-task",
       "upcoming-task",
       "done-task",
     ]) {
-      expect(page.slice(start, end)).toContain(`>${title}</span>`);
+      expect(inbox).not.toContain(`>${title}</span>`);
     }
     expect(page).not.toContain('aria-label="Overdue tasks"');
     expect(page).not.toContain('aria-label="Completed tasks"');
@@ -124,7 +126,7 @@ describe("tasks", () => {
                   id: "scheduled",
                   title: "<Do something>",
                   date: "2026-11-21",
-                  notes: "",
+                  notes: "A task description",
                   completed: false,
                 },
               ],
@@ -144,10 +146,13 @@ describe("tasks", () => {
           /class="card task-list today-tasks"[^>]*><h3 id="today-tasks-title">Tasks<\/h3>.*\/tasks\/scheduled\/completion/,
         );
         expect(page).toMatch(
-          /class="task-edit editable-row-link"[^>]+><span class="task-title">&lt;Do something&gt;<\/span><time class="task-date" datetime="2026-11-21">.*?<\/time><\/a>/,
+          /class="task-edit editable-row-link"[^>]+><span class="task-text"><span class="task-title">&lt;Do something&gt;<\/span><span class="task-notes">A task description<\/span><\/span><time class="task-date" datetime="2026-11-21">.*?<\/time><\/a>/,
         );
+        expect(page).toContain('class="editable-row task-card has-notes"');
       } else {
         expect(page).not.toContain("today-tasks");
+        expect(page).not.toContain("A task description");
+        expect(page).not.toContain("has-notes");
       }
     },
   );
@@ -194,6 +199,14 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
             expect(
               (yield* tasks.list({})).find((row) => row.id === task.id),
             ).toEqual(task);
+            for (const completed of [true, true, false]) {
+              expect(
+                yield* tasks.setCompletion({
+                  id: task.id,
+                  payload: { completed },
+                }),
+              ).toMatchObject({ completed, date: dateKey(new Date()) });
+            }
             const payload = {
               title: "Scheduled",
               date: "2026-11-21",
@@ -204,18 +217,18 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
             );
             for (let i = 0; i < 2; i++) {
               expect(
-                (yield* tasks.setCompletion({
+                yield* tasks.setCompletion({
                   id: task.id,
                   payload: { completed: true },
-                }))?.completed,
-              ).toBe(true);
+                }),
+              ).toMatchObject({ completed: true, date: payload.date });
             }
             expect(
-              (yield* tasks.update({
+              yield* tasks.update({
                 id: task.id,
                 payload: { ...payload, date: null },
-              }))?.completed,
-            ).toBe(true);
+              }),
+            ).toMatchObject({ completed: true, date: payload.date });
             expect(
               (yield* tasks.setCompletion({
                 id: task.id,

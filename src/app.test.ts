@@ -172,6 +172,27 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)(
               taskTitle,
             );
             const taskDate = dateKey(new Date());
+            const completedInboxTask = yield* request(
+              `/tasks/${task.id}/completion`,
+              {
+                method: "POST",
+                headers: { "Datastar-Request": "true" },
+                body: new URLSearchParams({
+                  completed: "true",
+                  view: "dashboard",
+                }),
+              },
+            );
+            expect(completedInboxTask.headers.get("content-type")).toContain(
+              "text/event-stream",
+            );
+            expect(
+              yield* Effect.promise(() => completedInboxTask.text()),
+            ).not.toContain(taskTitle);
+            expect(yield* tasks.get({ id: task.id })).toMatchObject({
+              completed: true,
+              date: taskDate,
+            });
             const scheduledTask = yield* request(`/tasks/${task.id}`, {
               method: "POST",
               headers: { "Datastar-Request": "true" },

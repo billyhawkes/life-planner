@@ -2,6 +2,7 @@ import { Context, Effect, Layer, Option, Schema } from "effect";
 import { SecureRandom } from "effect/crypto";
 import { SqlClient, SqlSchema } from "effect/sql";
 import { DatabaseLive, DatabaseTest } from "@/db";
+import { dateKey } from "@/services/workouts/helpers";
 import {
   Task,
   TaskCompletion,
@@ -54,7 +55,9 @@ export class Tasks extends Context.Service<Tasks>()("Tasks", {
       }).annotate({ identifier: "UpdateTaskRequest" }),
       Result: Task,
       execute: ({ id, payload }) => sql`
-        UPDATE tasks SET title = ${payload.title}, date = ${payload.date}::date,
+        UPDATE tasks SET title = ${payload.title},
+          date = CASE WHEN completed THEN COALESCE(${payload.date}::date, date, ${dateKey(new Date())}::date)
+            ELSE ${payload.date}::date END,
           notes = ${payload.notes} WHERE id = ${id}
         RETURNING id, title, date::text, notes, completed`,
     });
@@ -65,7 +68,9 @@ export class Tasks extends Context.Service<Tasks>()("Tasks", {
       }).annotate({ identifier: "CompleteTaskRequest" }),
       Result: Task,
       execute: ({ id, payload }) => sql`
-        UPDATE tasks SET completed = ${payload.completed} WHERE id = ${id}
+        UPDATE tasks SET completed = ${payload.completed},
+          date = CASE WHEN ${payload.completed} THEN COALESCE(date, ${dateKey(new Date())}::date) ELSE date END
+        WHERE id = ${id}
         RETURNING id, title, date::text, notes, completed`,
     });
     const removeQuery = SqlSchema.findAll({
